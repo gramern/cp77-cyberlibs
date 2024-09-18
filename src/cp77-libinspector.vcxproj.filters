@@ -18,12 +18,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\LICENSE.md" />
     <None Include="..\README.md" />
     <None Include="..\.gitignore" />
     <None Include="..\docs\methods.md">
       <Filter>docs</Filter>
     </None>
+    <None Include="..\LICENSE" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\resources\VersionInfo.rc">

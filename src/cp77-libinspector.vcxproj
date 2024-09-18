@@ -132,7 +132,7 @@
   <ItemGroup>
     <None Include="..\.gitignore" />
     <None Include="..\docs\methods.md" />
-    <None Include="..\LICENSE.md" />
+    <None Include="..\LICENSE" />
     <None Include="..\README.md" />
   </ItemGroup>
   <ItemGroup>
