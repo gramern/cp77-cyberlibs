@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{caee78be-2893-49fc-8f09-fd50fc6327c8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resources">
+      <UniqueIdentifier>{641d6ae9-93a2-4438-92e0-c5b0336c7313}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{f6142d1e-205f-4764-941c-5a537ec3c58f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\external-libraries">
+      <UniqueIdentifier>{35e3e801-627c-4037-aec7-4912f685573d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="docs">
+      <UniqueIdentifier>{8e9cb28e-05a9-4250-b033-5b891804dd8c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\LICENSE.md" />
+    <None Include="..\README.md" />
+    <None Include="..\.gitignore" />
+    <None Include="..\docs\methods.md">
+      <Filter>docs</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\resources\VersionInfo.rc">
+      <Filter>resources</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="LibInspector.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\dependencies\RED4ext.SDK\build\$(Configuration)\RED4ext.SDK.lib">
+      <Filter>include\external-libraries</Filter>
+    </Library>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\resources\resource.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="LibInspector.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
