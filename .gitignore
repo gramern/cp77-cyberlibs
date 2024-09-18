@@ -1,0 +1,43 @@
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+*.aps
+
+# Dependencies
+dependencies/*
+!dependencies/.gitkeep
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+build/
+[Bb]in/
+[Oo]bj/
+
+# Resource compiler temporary files
+RC*
+[Rr]esources/[Rr][Cc]*
+
+# NuGet packages
+packages/
+
+# CMake
+[Cc]make[Bb]uild*/
+
+# Code coverage and profiling
+*.opencover.xml
+*.dotCover
+
+# IDE and editor files
+.vscode/
+*.swp
+
+# Other
+*.log
+*.tlog
