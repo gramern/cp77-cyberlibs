@@ -134,6 +134,7 @@
     <None Include="..\docs\methods.md" />
     <None Include="..\LICENSE" />
     <None Include="..\README.md" />
+    <None Include="..\THIRD_PARTY_LICENSES" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="..\dependencies\RED4ext.SDK\build\$(Configuration)\RED4ext.SDK.lib" />
