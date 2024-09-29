@@ -9,7 +9,9 @@ Adds methods that can be called from other mods or CET's console:
 - `GameModule.IsLoaded(string fileNameOrPath)`:  Get a boolean indicating whether a module is loaded by the game
 - `GameModule.GetVersion(string fileNameOrPath)`: Get the version of a module as a string
 
-See [methods.md](docs/methods.md) for detailed documentation.
+...and others, both implemented already and planned. Build the project, install it and type `Cyberlibs.Help()` in CET's console for help. The project is a WIP.
+
+See [methods.md](docs/methods.md) for detailed documentation (WIP).
 
 ## Requirements
 + Cyberpunk 2.13
