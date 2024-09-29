@@ -1,4 +1,4 @@
-# CyberLibs
+# Cyberlibs
 
 A RED4ext plugin for Cyberpunk 2077 for diagnostics and inspection of libraries and plugins loaded by the game.
 
