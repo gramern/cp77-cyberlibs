@@ -1,4 +1,4 @@
-# Cyberlibs
+# Cyberlibs (WIP)
 
 A RED4ext plugin for Cyberpunk 2077 for diagnostics and inspection of libraries and plugins loaded by the game.
 
@@ -20,7 +20,11 @@ See [methods.md](docs/methods.md) for detailed documentation (WIP).
 + [Cyber Engine Tweaks](https://github.com/maximegmd/CyberEngineTweaks) 1.33.0+
 
 ## Installation
-Place the `Cyberlibs.dll` file in the `..\your Cyberpunk 2077 folder\red4ext\plugins\Cyberlibs` folder or unzip the archive to the game folder.
+Place the `Cyberlibs.dll` file in the `..\your Cyberpunk 2077 folder\red4ext\plugins\Cyberlibs` folder.
+
+Place `*.reds` scripts in `..\Cyberpunk 2077\r6\scripts\Cyberlibs`. 
+
+The Lua (CET) part goes to `..\Cyberpunk 2077\bin\x64\plugins\cyber_engine_tweaks\mods\Cyberlibs`.
 
 ## Building
 1. Clone the repository: (`git clone https://github.com/gramern/cp77-cyberlibs.git`).
