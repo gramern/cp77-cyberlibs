@@ -1,0 +1,27 @@
+{
+  "editor.detectIndentation": false,
+  "editor.tabSize": 2,
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/.DS_Store?": true,
+  },
+  "[lua]": {
+    "editor.tabSize": 2
+  },
+  "[reds]": {
+    "editor.tabSize": 2
+  },
+  "Lua.diagnostics.globals": [
+    "json",
+    "ImGui",
+    "ImGuiCol",
+    "ImGuiCond",
+    "ImGuiStyleVar",
+    "ImGuiWindowFlags",
+    "GameModule"
+  ],
+  "Lua.diagnostics.disable": [
+    "redundant-parameter"
+  ]
+}

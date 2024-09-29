@@ -1,0 +1,17 @@
+{
+  "name": "Cyberlibs",
+  "version": "0.2.0.0",
+  "license": true,
+  "scripts": {
+    "redscript": {
+      "src": "scripts"
+    },
+    "cet": {
+      "src": "lua"
+    }
+  },
+  "plugin": {
+    "debug": "build\\Debug\\",
+    "release": "build\\Release\\"
+  }
+}

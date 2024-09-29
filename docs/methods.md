@@ -1,8 +1,6 @@
-# Methods
+# GameModule
 
-All methods are global and can be called at any moment after the plugin is initialized by RED4ext.
-
-## `LibInspector_IsLibraryLoaded()`
+## `IsLoaded()`
 
 ### Description:
 Returns whether a library file has been loaded by the game. Can be used to detect presence of certain frameworks or mods like dlssg-to-fsr3 or ReShade (inculding ReShade's addons).
@@ -15,19 +13,15 @@ Returns whether a library file has been loaded by the game. Can be used to detec
 
 ### Exemplary Usage (CET-lua):
 ```
-if type(LibInspector_IsLibraryLoaded) == "function" then -- check if the method is available
-    local isNukem = LibInspector_IsLibraryLoaded("dlssg_to_fsr3_amd_is_better.dll")
+local isNukem = GameModule.IsLoaded("dlssg_to_fsr3_amd_is_better.dll")
     
-    print(isNukem)
-else
-    print("Can't find function address 'LibInspector_IsLibraryLoaded'")
-end 
+print(isNukem)
 ```
 
-## `LibInspector_GetVersionAsString()`
+## `GetVersion()`
 
 ### Description:
-Returns version of a loaded library if available.
+Returns version of a loaded library if available in the file.
 
 ### Parameters:
 `libraryName` (`string`) - Library's full file name with its file extension. The parameter is not case-sensitive.
@@ -37,11 +31,7 @@ Returns version of a loaded library if available.
 
 ### Exemplary Usage (CET-lua):
 ```
-if type(LibInspector_GetVersionAsString) == "function" then -- check if the method is available
-    local dlssgVer = LibInspector_GetVersionAsString("nvngx_dlssg.dll")
+local dlssgVer = GameModule.GetVersion("nvngx_dlssg.dll")
     
-    print(dlssgVer)
-else
-    print("Can't find function address 'LibInspector_GetVersionAsString'")
-end 
+print(dlssgVer)
 ```
