@@ -1,0 +1,9 @@
+[submodule "dependencies/RED4ext.SDK"]
+	path = dependencies/RED4ext.SDK
+	url = https://github.com/WopsS/RED4ext.SDK.git
+[submodule "dependencies/cp2077-red-lib"]
+	path = dependencies/cp2077-red-lib
+	url = https://github.com/psiberx/cp2077-red-lib.git
+[submodule "dependencies/libpe"]
+	path = dependencies/libpe
+	url = https://github.com/jovibor/libpe.git

@@ -9,6 +9,9 @@
 # red-cli
 stage/
 
+# Ignore dependencies folders
+/dependencies/
+
 # User-specific files
 *.rsuser
 *.suo
