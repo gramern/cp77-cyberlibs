@@ -1,0 +1,37 @@
+{
+  "text": [0, 0, 0, 1],
+  "textAlt": [1, 1, 1, 1],
+  "textTitle": [1, 1, 1, 1],
+  "base": [0.86, 0.08, 0.24, 1],
+  "border": [0.86, 0.08, 0.24, 1],
+  "bg": [0, 0, 0, 0.75],
+  "dim": [0.62, 0.06, 0.22, 1],
+  "pop": [1, 0.30, 0.36, 1],
+  "separator": [0.4, 0.4, 0.4, 1],
+  "scrollbar": { 
+    "base": [0.86, 0.08, 0.24, 1],
+    "dim": [0.62, 0.06, 0.22, 1],
+    "pop": [1, 0.30, 0.36, 1]
+  },
+  "child": {
+    "border": 0,
+    "rounding": 8
+  },
+  "frame": {
+    "border": 0,
+    "rounding": 8
+  },
+  "popup": {
+    "border": 1,
+    "rounding": 8
+  },
+  "tab": {
+    "base": [0.86, 0.08, 0.24, 1],
+    "border": 0,
+    "rounding": 8
+  },
+  "window": {
+    "border": 1,
+    "rounding": 8
+  }
+}

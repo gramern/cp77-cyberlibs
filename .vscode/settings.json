@@ -12,14 +12,16 @@
   "[reds]": {
     "editor.tabSize": 2
   },
+  "Lua.runtime.version": "LuaJIT",
+  "Lua.workspace.preloadFileSize": 15360,
+  "Lua.workspace.library": [
+      "dependencies\\CET_ImGui_lua_type_defines-main",
+      "dependencies\\cet-lua-lib"
+  ],
   "Lua.diagnostics.globals": [
     "json",
-    "ImGui",
-    "ImGuiCol",
-    "ImGuiCond",
-    "ImGuiStyleVar",
-    "ImGuiWindowFlags",
-    "GameModule"
+    "GameModule",
+    "Game.GetSystemRequestsHandler"
   ],
   "Lua.diagnostics.disable": [
     "redundant-parameter"

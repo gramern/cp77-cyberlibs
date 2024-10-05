@@ -1,18 +1,29 @@
+-- logger.lua
+-- A part of "globals" pack for CET lua mods
+-- (c) gramern 2024
+
 local logger = {
   __VERSION = { 0, 2, 0 },
 }
 
 local var = {
-  isDebug = false
+  isDebug = false,
+  modName = "logger"
 }
 
 local function bracketizer(contents)
   return "[" .. tostring(contents) .. "]"
 end
 
-local function printer(contents, forceLog)
+local function printer(contents, forceLog, debug)
   contents = tostring(contents)
-  print(contents)
+
+  if not debug then
+    print(contents)
+  else
+    if not var.isDebug then return end
+    print(contents)
+  end
 
   if forceLog then
     spdlog.error(contents)
@@ -26,7 +37,7 @@ local function parser(type, ...)
   local contents = {...}
 
   if #contents == 0 then
-    local parsed = bracketizer(Cyberlibs.__NAME) .. " " .. bracketizer(type) .." " .. "No data found."
+    local parsed = bracketizer(var.modName) .. " " .. bracketizer(type) .." " .. "No data found."
     printer(parsed, true)
 
     return
@@ -36,7 +47,11 @@ local function parser(type, ...)
     contents[i] = tostring(v)
   end
 
-  return bracketizer(Cyberlibs.__NAME) .. " " .. bracketizer(type) .. " " .. table.concat(contents, " ")
+  return bracketizer(var.modName) .. " " .. bracketizer(type) .. " " .. table.concat(contents, " ")
+end
+
+function logger.debug(...)
+  printer(parser("debug", ...), false, true)
 end
 
 function logger.error(...)
@@ -51,6 +66,9 @@ function logger.warning(...)
   printer(parser("warning", ...))
 end
 
+---@param bracketizeParameter number
+---@param forceLog boolean
+---@param ... any
 function logger.custom(bracketizeParameter, forceLog, ...)
   local contents = {...}
 
@@ -68,13 +86,19 @@ function logger.custom(bracketizeParameter, forceLog, ...)
     end
   end
 
-  local formattedContents = bracketizer(Cyberlibs.__NAME) .. " " .. table.concat(contents, " ")
+  local formattedContents = bracketizer(var.modName) .. " " .. table.concat(contents, " ")
 
   printer(formattedContents, forceLog)
 end
 
+---@param isDebug boolean
 function logger.setDebug(isDebug)
   var.isDebug = isDebug
+end
+
+---@param name string
+function logger.setModName(name)
+  var.modName = name
 end
 
 return logger

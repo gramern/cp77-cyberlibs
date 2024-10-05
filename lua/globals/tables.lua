@@ -1,7 +1,13 @@
+-- tables.lua
+-- A part of "globals" pack for CET lua mods
+-- (c) gramern 2024
+
 local tables = {
   __VERSION = { 0, 2, 0 },
 }
 
+---@param contents table
+---@return table
 function tables.deepcopy(contents)
   local copy
 
@@ -20,6 +26,8 @@ function tables.deepcopy(contents)
   return copy
 end
 
+---@param t table
+---@return table
 function tables.assignKeysOrder(t)
   local sortedKeys = {}
 
@@ -31,6 +39,8 @@ function tables.assignKeysOrder(t)
   return sortedKeys
 end
 
+---@param t table
+---@return string
 function tables.getTableType(t)
   local count = 0
   local isSequential = true
@@ -70,6 +80,29 @@ function tables.add(addTo, addFrom)
   return addTo
 end
 
+---@param mergeTo table
+---@param mergeA table
+---@return table
+function tables.mergeTables(mergeTo, mergeA)
+  if mergeA == nil then return mergeTo end
+
+  for k, v in pairs(mergeA) do
+    if type(v) == "table" then
+      if type(mergeTo[k]) == "table" then
+        mergeTo[k] = tables.mergeTables(mergeTo[k], v)
+      else
+        mergeTo[k] = tables.mergeTables({}, v)
+      end
+    else
+      mergeTo[k] = v
+    end
+  end
+
+  return mergeTo
+end
+
+---@param func function
+---@return table
 function tables.retrieveTable(func)
   local result = func
   local maxDepth = 8
@@ -83,6 +116,8 @@ function tables.retrieveTable(func)
   return result
 end
 
+---@param t table
+---@return string
 function tables.tableToString(t)
   if t == nil then return nil end
 

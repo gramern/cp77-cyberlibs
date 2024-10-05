@@ -1,3 +1,7 @@
+-- search.lua
+-- A part of "globals" pack for CET lua mods
+-- (c) gramern 2024
+
 local search = {
   __VERSION = { 0, 2, 0 },
 }

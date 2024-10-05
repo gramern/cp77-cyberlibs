@@ -4,7 +4,7 @@ local publicApi = {
 
 local logger = require("globals/logger")
 local search = require("globals/search")
-local style = require("globals/style")
+local style = require("globals/custom/style")
 local utils = require("globals/utils")
 
 local tables = require("globals/tables")
@@ -198,7 +198,7 @@ function publicApi.PrintVersion(fileNameOrPath, forceLog)
   logger.custom(0, forceLog, GameModule.GetVersion(fileNameOrPath))
 end
 
-function publicApi.OnInit()
+function publicApi.onInit()
   Observe('Cyberlibs', 'Version', function()
     GetMod('Cyberlibs').Version()
   end)
