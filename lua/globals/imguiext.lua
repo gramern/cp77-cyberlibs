@@ -28,17 +28,13 @@ local fallbackTheme = {
   window = { border = 1, rounding = 5 }
 }
 
-local popups = {}
-
-local searchInput = {}
+local searchInputs = {}
 
 local statusBar = {
   __default = {}
 }
 
-local tabBar = {
-  __activeTab = {}
-}
+local tabBars = {}
 
 local var = {
   notification = { active = false, text = "", textWidth = 0 },
@@ -242,10 +238,11 @@ end
 
 ---@param text string
 ---@param charCount number
-function ImGuiExt.TextTitle(text, charCount)
+---@param fontScale number
+function ImGuiExt.TextTitle(text, charCount, fontScale)
   ImGui.PushStyleColor(ImGuiCol.Text, activeTheme.textTitle[1], activeTheme.textTitle[2], activeTheme.textTitle[3], activeTheme.textTitle[4])
 
-  ImGui.SetWindowFontScale(1.2)
+  ImGui.SetWindowFontScale(fontScale)
   ImGui.TextWrapped(utils.trimString(text, charCount))
   ImGui.PopStyleColor()
   ImGui.SetWindowFontScale(1.0)
@@ -306,39 +303,13 @@ function ImGuiExt.Notification()
 end
 
 ------------------
--- Popups
-------------------
-
-local function initializePopup(label)
-  popups[label] = {
-    newLabel = "##" .. label,
-  }
-end
-
-function ImGuiExt.PopupMenu(label, entriesTable)
-  if not popups[label] then
-    initializePopup(label)
-  end
-
-  if ImGui.BeginPopupContextItem(popups[label].newLabel, ImGuiPopupFlags.MouseButtonLeft) then
-    for _, entry in pairs(entriesTable) do
-      if ImGui.MenuItem(entry.label) then
-        entry.command()
-      end
-    end
-
-    ImGui.EndPopup()
-  end
-end
-
-------------------
 -- Search Input
 ------------------
 
 ---@param label string
 ---@param hint string
 local function intializeSearchInput(label, hint)
-  searchInput[label] = {
+  searchInputs[label] = {
     hint = IconGlyphs.Magnify .. " " .. hint,
     isTyped = nil,
     newLabel = "##" .. label,
@@ -353,28 +324,28 @@ end
 ---@return string
 ---@return boolean
 function ImGuiExt.SearchInput(label, query, hint, itemWidth)
-  if searchInput[label] == nil then
+  if searchInputs[label] == nil then
     intializeSearchInput(label, hint)
   end
 
   if query ~= "" then
-    searchInput[label].hint = query
+    searchInputs[label].hint = query
   else
-    searchInput[label].hint = IconGlyphs.Magnify .. " " .. hint
+    searchInputs[label].hint = IconGlyphs.Magnify .. " " .. hint
   end
 
   ImGui.SetNextItemWidth(itemWidth * var.scaleFactor)
-  searchInput[label].newQuery, searchInput[label].isTyped = ImGui.InputTextWithHint(searchInput[label].newLabel,
+  searchInputs[label].newQuery, searchInputs[label].isTyped = ImGui.InputTextWithHint(searchInputs[label].newLabel,
                                                                                     query,
-                                                                                    searchInput[label].hint,
+                                                                                    searchInputs[label].hint,
                                                                                     40,
                                                                                     ImGuiInputTextFlags.AutoSelectAll)
 
-  if query ~= searchInput[label].hint and string.find(searchInput[label].newQuery, IconGlyphs.Magnify, 1, true) then
-    searchInput[label].newQuery = ""
+  if query ~= searchInputs[label].hint and string.find(searchInputs[label].newQuery, IconGlyphs.Magnify, 1, true) then
+    searchInputs[label].newQuery = ""
   end
 
-  return searchInput[label].newQuery, searchInput[label].isTyped
+  return searchInputs[label].newQuery, searchInputs[label].isTyped
 end
 
 ------------------
@@ -447,61 +418,106 @@ end
 ------------------
 
 local function initializeTabBar(label)
-  tabBar[label] = {
+  tabBars[label] = {
     newLabel = "##" .. label,
+    recentlyClosedTabs = {},
     tabs = {},
   }
 end
 
----@param label string
----@param tabsTable table `tabsTable[tab] = { contents: function, description: string, label: string, isCloseable: boolean }`
----@param padding number
-function ImGuiExt.TabBar(label, tabsTable, padding)
-  if tabBar[label] == nil then
-    initializeTabBar(label)
+---@param tabBarLabel string
+---@param tabLabel string
+---@param content function
+---@param title string?
+---@return boolean
+function ImGuiExt.AddTab(tabBarLabel, tabLabel, content, title)
+  if tabBars[tabBarLabel].tabs[tabLabel] ~= nil then return end
+
+  tabBars[tabBarLabel].tabs[tabLabel] = {
+    label = tabLabel,
+    content = content,
+    title = title or ""
+  }
+end
+
+---@param tabBarLabel string
+function ImGuiExt.TabBar(tabBarLabel)
+  if tabBars[tabBarLabel] == nil then
+    initializeTabBar(tabBarLabel)
   end
 
-  if next(tabsTable) then
-    if ImGui.BeginTabBar(tabBar[label].newLabel, ImGuiTabBarFlags.Reorderable + ImGuiTabBarFlags.FittingPolicyScroll) then
-      for _, tab in pairs(tabsTable) do
-        if not tab.isClosed and ImGui.BeginTabItem(tab.label) then
-          if tab.description then
-            ImGuiExt.TextTitle(tab.description, 70)
-          else
-            ImGui.Text("")
+  if next(tabBars[tabBarLabel].tabs) then
+    local selectedTab = nil
+    for _, tab in pairs(tabBars[tabBarLabel].tabs) do
+      if not tab.isOld then
+        selectedTab = tab.label
+        tab.isOld = true
+        break
+      end
+    end
+
+    if ImGui.BeginTabBar(tabBars[tabBarLabel].newLabel, ImGuiTabBarFlags.Reorderable + ImGuiTabBarFlags.FittingPolicyScroll) then
+      for _, tab in pairs(tabBars[tabBarLabel].tabs) do
+        if _ then
+          local tabFlags = tab.label == selectedTab and ImGuiTabItemFlags.SetSelected or 0
+
+          tab.isOpen, tab.isSelected = ImGui.BeginTabItem(tab.label, true, tabFlags)
+
+          if tab.isSelected then
+            if tab.title then
+              ImGuiExt.TextTitle(tab.title, 75, 1.2)
+            end
+
+            if tab.content and type(tab.content) == "function" then
+              tab.content()
+            end
+
+            ImGui.EndTabItem()
           end
-
-          ImGui.SameLine()
-          ImGuiExt.AlignNextItemToWindowRight(ImGui.CalcTextSize(IconGlyphs.CloseCircleOutline), padding)
-
-          if ImGui.Button(IconGlyphs.Close) then
-            tab.isClosed = true
-            print("click")
-          end
-
-          ImGuiExt.SetTooltip("Close this tab.")
-
-          if tab.content and type(tab.content) == "function" then
-            tab.content()
-          end
-
-          ImGui.EndTabItem()
         end
 
-        if tab.isClosed then
-          tabsTable[_] = nil
+        if not tab.isOpen then
+          tab.isOld = nil
+          tab.isOpen = nil
+          tab.isSelected = nil
+
+          for i, closedTab in ipairs(tabBars[tabBarLabel].recentlyClosedTabs) do
+            if closedTab.label == tab.label then
+              table.remove(tabBars[tabBarLabel].recentlyClosedTabs, i)
+              break
+            end
+          end
+
+          if #tabBars[tabBarLabel].recentlyClosedTabs > 20 then
+            table.remove(tabBars[tabBarLabel].recentlyClosedTabs, 1)
+          end
+
+          table.insert(tabBars[tabBarLabel].recentlyClosedTabs, tab)
+          tabBars[tabBarLabel].tabs[_] = nil
         end
       end
 
       ImGui.EndTabBar()
     end
+
+    return true
   else
     local textWidth = ImGui.CalcTextSize("Open Cyberlibs' module or a file to start.")
     ImGui.Text("")
     ImGuiExt.AlignNextItemToWindowCenter(textWidth)
     ImGuiExt.TextAlt("Open Cyberlibs' module or a file to start.")
     ImGui.Text("")
+
+    return false
   end
+end
+
+---@param tabBarLabel string
+---@return table
+function ImGuiExt.GetRecentlyClosedTabs(tabBarLabel)
+  if tabBars[tabBarLabel] == nil then return {} end
+
+  return tabBars[tabBarLabel].recentlyClosedTabs
 end
 
 ------------------

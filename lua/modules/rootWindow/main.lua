@@ -25,34 +25,62 @@ local tabAboutVar = {
   licenses = ""
 }
 
-local popupmenuCompVar = {
-  Settings = {
-    label = "Settings",
-    command = function() return rootWindow.addTab("Settings", rootWindow.drawTabSettings, "Cyberlibs Settings:") end,
-  },
-  About = {
-    label = "About",
-    command = function() return rootWindow.addTab("About", rootWindow.drawTabAbout, "About Cyberlibs") end,
-  },
-}
-
 local searchCompVar = {
   query = "",
 }
 
-local tabsCompVar = {}
+local function getClosedTabsList(closedTabs)
+  local closedTabsList = {}
 
----@param label string
----@param content function
----@param description string?
-function rootWindow.addTab(label, content, description)
-  if tabsCompVar[label] ~= nil then return end
+  if next(closedTabs) then
+    local j = 1
 
-  tabsCompVar[label] = {
-    label = label,
-    content = content,
-    description = description or ""
-  }
+    for i = #closedTabs, 1, -1 do
+      closedTabsList[j] = {
+        label = closedTabs[i].label,
+        command = function() return ImGuiExt.AddTab("RootWindow.TabBar", closedTabs[i].label, closedTabs[i].content, closedTabs[i].title) end
+      }
+      j = j + 1
+    end
+  end
+
+  return closedTabsList
+end
+
+local function drawRecentlyClosedTabsMenu()
+  if ImGui.BeginMenu("Recently Closed Tabs") then
+    local closedTabsList = getClosedTabsList(ImGuiExt.GetRecentlyClosedTabs("RootWindow.TabBar"))
+
+    if next(closedTabsList)then
+      for _, entry in ipairs(closedTabsList) do
+        if ImGui.MenuItem(entry.label) then
+          entry.command()
+        end
+      end
+    else
+      ImGui.MenuItem("---")
+    end
+
+    ImGui.EndMenu()
+  end
+end
+
+local function drawRootPopupMenu()
+  if ImGui.BeginPopupContextItem("RootWindow.RootPopupMenu", ImGuiPopupFlags.MouseButtonLeft) then
+    drawRecentlyClosedTabsMenu()
+
+    if ImGui.MenuItem("Settings") then
+      ImGuiExt.AddTab("RootWindow.TabBar", "Settings", rootWindow.drawTabSettings, "Cyberlibs Settings:")
+    end
+
+    ImGui.Separator()
+
+    if ImGui.MenuItem("About") then
+      ImGuiExt.AddTab("RootWindow.TabBar", "About", rootWindow.drawTabAbout, "About Cyberlibs")
+    end
+
+    ImGui.EndPopup()
+  end
 end
 
 function rootWindow.drawTabAbout()
@@ -74,6 +102,10 @@ function rootWindow.drawTabAbout()
   tabAboutVar.licenses = Cyberlibs.__LICENSE .. "\n" .. thirdparty[1]
 end
 
+function rootWindow.drawTabHelp()
+
+end
+
 function rootWindow.drawTabSettings()
   ImGuiExt.TextAlt("Window Theme:")
   ImGuiExt.DrawWithItemWidth(300, "ThemesCombo")
@@ -86,6 +118,8 @@ function rootWindow.drawTabSettings()
     ImGuiExt.SetStatusBar("Settings saved.")
   end
 end
+
+
 
 function rootWindow.draw()
   ImGuiExt.PushWindowMinSize(480, 60)
@@ -105,10 +139,9 @@ function rootWindow.draw()
       print("menu click")
     end
 
-    ImGuiExt.PopupMenu("RootWindow.PopupMenu", popupmenuCompVar)
-
+    drawRootPopupMenu()
     ImGui.Separator()
-    ImGuiExt.TabBar("RootWindow.TabBar", tabsCompVar, ImGui.GetStyle().WindowPadding.x)
+    ImGuiExt.TabBar("RootWindow.TabBar")
     ImGuiExt.StatusBarAlt(ImGuiExt.GetStatusBar())
   end
 
