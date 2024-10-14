@@ -175,17 +175,19 @@ end
 ------------------
 
 ---@param itemWidth number
-function ImGuiExt.AlignNextItemToWindowCenter(itemWidth)
-  local windowWidth = ImGui.GetWindowWidth()
-  local startX = (windowWidth - itemWidth * var.scaleFactor) * 0.5
+---@param windowWidth number
+---@param padding number
+function ImGuiExt.AlignNextItemToWindowCenter(itemWidth, windowWidth, padding)
+  padding = padding * 2
+  local startX = (windowWidth - padding - itemWidth * var.scaleFactor) * 0.5
   ImGui.SetCursorPosX(startX)
   ImGui.SetNextItemWidth(itemWidth * var.scaleFactor)
 end
 
 ---@param itemWidth number
-function ImGuiExt.AlignNextItemToWindowRight(itemWidth, padding)
-  padding = padding or 0
-  local windowWidth = ImGui.GetWindowWidth()
+---@param windowWidth number
+---@param padding number
+function ImGuiExt.AlignNextItemToWindowRight(itemWidth, windowWidth, padding)
   local startX = windowWidth - (itemWidth * var.scaleFactor) - padding
   ImGui.SetCursorPosX(startX)
   ImGui.SetNextItemWidth(itemWidth * var.scaleFactor)
@@ -419,6 +421,7 @@ end
 
 local function initializeTabBar(label)
   tabBars[label] = {
+    activeTab = "",
     newLabel = "##" .. label,
     recentlyClosedTabs = {},
     tabs = {},
@@ -431,13 +434,25 @@ end
 ---@param title string?
 ---@return boolean
 function ImGuiExt.AddTab(tabBarLabel, tabLabel, content, title)
-  if tabBars[tabBarLabel].tabs[tabLabel] ~= nil then return end
+  if tabBars[tabBarLabel].tabs[tabLabel] ~= nil then return false end
 
   tabBars[tabBarLabel].tabs[tabLabel] = {
     label = tabLabel,
     content = content,
     title = title or ""
   }
+
+  return true
+end
+
+---@param tabBarLabel string
+---@return string
+function ImGuiExt.GetActiveTabLabel(tabBarLabel)
+  if tabBars[tabBarLabel] ~= nil then
+    return tabBars[tabBarLabel].activeTab
+  else
+    return ""
+  end
 end
 
 ---@param tabBarLabel string
@@ -464,7 +479,7 @@ function ImGuiExt.TabBar(tabBarLabel)
           tab.isOpen, tab.isSelected = ImGui.BeginTabItem(tab.label, true, tabFlags)
 
           if tab.isSelected then
-            if tab.title then
+            if tab.title ~= "" then
               ImGuiExt.TextTitle(tab.title, 75, 1.2)
             end
 
@@ -473,6 +488,8 @@ function ImGuiExt.TabBar(tabBarLabel)
             end
 
             ImGui.EndTabItem()
+
+            tabBars[tabBarLabel].activeTab = tab.label
           end
         end
 
@@ -480,6 +497,7 @@ function ImGuiExt.TabBar(tabBarLabel)
           tab.isOld = nil
           tab.isOpen = nil
           tab.isSelected = nil
+          tabBars[tabBarLabel].activeTab = ""
 
           for i, closedTab in ipairs(tabBars[tabBarLabel].recentlyClosedTabs) do
             if closedTab.label == tab.label then
@@ -502,10 +520,6 @@ function ImGuiExt.TabBar(tabBarLabel)
 
     return true
   else
-    local textWidth = ImGui.CalcTextSize("Open Cyberlibs' module or a file to start.")
-    ImGui.Text("")
-    ImGuiExt.AlignNextItemToWindowCenter(textWidth)
-    ImGuiExt.TextAlt("Open Cyberlibs' module or a file to start.")
     ImGui.Text("")
 
     return false
@@ -572,6 +586,24 @@ end
 ---@return string
 function ImGuiExt.GetActiveThemeName()
   return activeThemeName
+end
+
+--- Avaiable elements: `text, textAlt, textTitle, base, border, bg,
+--- dim, pop, scrollbar.base, scrollbar.dim, scrollbar.pop,
+--- separator, tab.base`
+---@param elementName string
+---@return float (red)
+---@return float (green)
+---@return float (blue)
+---@return float (alpha)
+function ImGuiExt.GetActiveThemeColor(elementName)
+  if activeTheme ~= nil then
+    local color = activeTheme[elementName]
+
+    return color[1], color[2], color[3], color[4]
+  else
+    return 1, 1, 1, 1
+  end
 end
 
 ---@param themeName string

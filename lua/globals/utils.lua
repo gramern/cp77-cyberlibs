@@ -10,6 +10,10 @@ local delays = {}
 
 local logger = require("globals/logger")
 
+local mathAbs, mathHuge, mathMax = math.abs, math.huge, math.max
+local stringFind, stringRep, stringSub = string.find, string.rep, string.sub
+local tableConcat, tableInsert = table.concat, table.insert
+
 ------------------
 -- Delays
 ------------------
@@ -60,7 +64,7 @@ function utils.updateDelays(deltaTime)
         delay.callback()
       end
     
-      table.insert(delaysToRemove, key)
+      tableInsert(delaysToRemove, key)
       logger.debug("Delay fired for:", key)
     end
   end
@@ -89,7 +93,7 @@ end
 function utils.loadJson(fileNameOrPath)
   local content = {}
 
-  if not string.find(fileNameOrPath, '%.json$') then
+  if not stringFind(fileNameOrPath, '%.json$') then
     fileNameOrPath = fileNameOrPath .. ".json"
   end
 
@@ -107,7 +111,7 @@ end
 ---@param fileNameOrPath string
 ---@return boolean
 function utils.saveJson(fileNameOrPath, content)
-  if not string.find(fileNameOrPath, '%.json$') then
+  if not stringFind(fileNameOrPath, '%.json$') then
     fileNameOrPath = fileNameOrPath .. ".json"
   end
 
@@ -131,13 +135,61 @@ end
 ------------------
 
 ---@param text string
+---@return table
+function utils.parseMultiline(text)
+  local lines = {}
+
+  for line in text:gmatch("([^\n\r]*)\r?\n?") do
+    tableInsert(lines, line)
+  end
+
+  return lines
+end
+
+---@param text string
+---@param spaces integer
+---@param preserveAsBlock boolean
+---@return string
+function utils.indentString(text, spaces, preserveAsBlock)
+  local lines = utils.parseMultiline(text)
+
+  if preserveAsBlock and spaces < 0 then
+    local minIndent = math.huge
+
+    for _, line in ipairs(lines) do
+      local currentIndent = #(line:match("^ *"))
+
+      if currentIndent < minIndent and #line:gsub("^%s+", "") > 0 then
+        minIndent = currentIndent
+      end
+    end
+
+    spaces = mathMax(-minIndent, spaces)
+  end
+
+  if spaces >= 0 then
+    for i, line in ipairs(lines) do
+      lines[i] = stringRep(" ", spaces) .. line
+    end
+  else
+    for i, line in ipairs(lines) do
+      local currentSpaces = #(line:match("^ *"))
+      local newSpaces = mathMax(0, currentSpaces + spaces)
+      lines[i] = stringRep(" ", newSpaces) .. line:match("^ *(.*)")
+    end
+  end
+
+  return tableConcat(lines, "\n")
+end
+
+---@param text string
 ---@param charCount number
 ---@return string
 function utils.trimString(text, charCount)
   if #text <= charCount then
     return text
   else
-    return string.sub(text, 1, charCount - 3) .. "..."
+    return stringSub(text, 1, charCount - 3) .. "..."
   end
 end
 

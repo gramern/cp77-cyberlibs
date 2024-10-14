@@ -62,6 +62,9 @@ function tables.getTableType(t)
   end
 end
 
+---@param addTo table
+---@param addFrom table
+---@return table
 function tables.add(addTo, addFrom)
   if addFrom == nil then return addTo end
 
@@ -78,6 +81,22 @@ function tables.add(addTo, addFrom)
   end
 
   return addTo
+end
+
+---@param t table
+---@return boolean
+function tables.hasNestedTables(t)
+  if type(t) ~= "table" then
+    return false
+  end
+
+  for _, v in pairs(t) do
+    if type(v) == "table" then
+      return true
+    end
+  end
+
+  return false
 end
 
 ---@param mergeTo table
@@ -101,11 +120,11 @@ function tables.mergeTables(mergeTo, mergeA)
   return mergeTo
 end
 
----@param func function
+---@param func function|table
+---@param maxDepth integer
 ---@return table
-function tables.retrieveTable(func)
+function tables.retrieveTable(func, maxDepth)
   local result = func
-  local maxDepth = 8
   local depth = 0
 
   while type(result) == "function" and depth < maxDepth do
@@ -117,7 +136,7 @@ function tables.retrieveTable(func)
 end
 
 ---@param t table
----@return string
+---@return string|nil
 function tables.tableToString(t)
   if t == nil then return nil end
 

@@ -7,8 +7,6 @@ local search = require("globals/search")
 local style = require("globals/custom/style")
 local utils = require("globals/utils")
 
-local tables = require("globals/tables")
-
 function publicApi.Version()
   return table.concat(Cyberlibs.__VERSION, ".")
 end
@@ -18,34 +16,65 @@ function publicApi.SetPrintingStyle(isEnabled)
   logger.info("Printing in style:", isEnabled)
 end
 
+local function printHelpTopics(t, forceLog)
+  for i, v in ipairs(t) do
+    style.formatEntry(forceLog, i, v)
+  end
+end
+
 function publicApi.Help(query, forceLog)
   local help = require("knowledgeBase/help")
-  local contents, itemsNumber = search.getContents('help')
-  local isTopic
+  local isTopic, itemType
 
-  if query and query ~= 0 then
-    if contents then
-      isTopic = search.followItem('help', query)
-      print(isTopic)
+  if not query or query == 0 then
+    search.setBrowseInstance('help', help.getTable())
+  end
+
+  local contents, itemsNumber = search.getBrowseContents('help')
+
+  if contents then
+    if query and query ~= 0 then
+      isTopic, itemType = search.followBrowseItem('help', query)
     else
-      isTopic = search.followItem('help', query)
+      isTopic = true
+      itemType = "table"
+    end
+
+    style.formatHeader("HELP FILES", forceLog)
+  else
+    style.formatFailHeader("HELP FILES", forceLog)
+    logger.custom(1, forceLog, ' Type Cyberlibs.Help() to start ')
+  
+    return
+  end
+
+  if isTopic then
+    contents, itemsNumber = search.getBrowseContents('help')
+
+    if itemType == "table" then
+      printHelpTopics(contents, forceLog)
+    else
+      local v = search.getBrowseItem('help', query)
+
+      if type(v) == "string" then
+        local text = utils.indentString(v, -20, true)
+        local lines = utils.parseMultiline(text)
+        itemsNumber = #lines
+
+        for _, line in ipairs(lines) do
+          style.formatEntry(forceLog, line)
+        end
+      else
+        itemsNumber = 1
+
+        style.formatEntry(forceLog, v)
+      end
     end
   else
-    search.setInstance('help', help.getTable())
-    isTopic = true
+    printHelpTopics(contents, forceLog)
   end
 
-  contents, itemsNumber = search.getContents('help')
-
-  style.formatHeader("HELP FILES")
-
-  if type(contents) == "table" then
-    for i, v in ipairs(contents) do
-      style.formatEntry(forceLog, i, v)
-    end
-  end
-
-  style.formatFooter(itemsNumber)
+  style.formatFooter(itemsNumber, forceLog)
   logger.custom(0, forceLog, "")
 
   if not isTopic then
@@ -58,12 +87,12 @@ end
 
 function publicApi.GetVersion(fileNameOrPath)
   local versions = require("knowledgeBase/versions")
-  search.setInstance('getVersion', versions.getTable())
-  local isData = search.followItem('getVersion', fileNameOrPath)
+  search.setBrowseInstance('getVersion', versions.getTable())
+  local isData = search.followBrowseItem('getVersion', fileNameOrPath)
   local version
 
   if isData then
-    version = search.getTable('getVersion')[GameModule.GetTimeDateStamp(fileNameOrPath)]
+    version = search.getBrowseTable('getVersion')[GameModule.GetTimeDateStamp(fileNameOrPath)]
   end
 
   if not version then
@@ -72,12 +101,6 @@ function publicApi.GetVersion(fileNameOrPath)
 
   return version
 end
-
-  -- print(search.getType('getVersion', search.getTable('getVersion')["Version"]))
-  -- print(search.getType(version))
-  -- print(search.getType('getVersion', search.getTable('getVersion')))
-  -- local isVersion = search.isItem('getVersion', search.getTable('getVersion')["Version"])
-  -- print(search.getTable('getVersion')["Version"])
 
 function publicApi.PrintAttribute(fileNameOrPath, attribute, forceLog)
   local attributes = {
