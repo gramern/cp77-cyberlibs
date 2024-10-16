@@ -109,8 +109,10 @@ function publicApi.PrintAttribute(fileNameOrPath, attribute, forceLog)
     ["EntryPoint"] = function() return GameModule.GetEntryPoint(fileNameOrPath) end,
     ["FilePath"] = function() return GameModule.GetFilePath(fileNameOrPath) end,
     ["FileSize"] = function() return GameModule.GetFileSize(fileNameOrPath) end,
+    ["FileType"] = function() return GameModule.GetFileType(fileNameOrPath) end,
     ["LoadAddress"] = function() return GameModule.GetLoadAddress(fileNameOrPath) end,
     ["MappedSize"] = function() return GameModule.GetMappedSize(fileNameOrPath) end,
+    ["TimeDateStamp"] = function() return GameModule.GetTimeDateStamp(fileNameOrPath) end,
     ["Version"] = function() return GameModule.GetVersion(fileNameOrPath) end,
   }
 

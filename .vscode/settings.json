@@ -7,7 +7,7 @@
     "**/.DS_Store?": true,
   },
   "[lua]": {
-    "editor.tabSize": 2
+    "editor.tabSize": 4
   },
   "[reds]": {
     "editor.tabSize": 2

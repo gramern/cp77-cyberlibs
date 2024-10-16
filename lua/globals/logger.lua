@@ -3,102 +3,102 @@
 -- (c) gramern 2024
 
 local logger = {
-  __VERSION = { 0, 2, 0 },
+    __VERSION = { 0, 2, 0 },
 }
 
 local var = {
-  isDebug = false,
-  modName = "logger"
+    isDebug = false,
+    modName = "logger"
 }
 
 local function bracketizer(contents)
-  return "[" .. tostring(contents) .. "]"
+    return "[" .. tostring(contents) .. "]"
 end
 
-local function printer(contents, forceLog, debug)
-  contents = tostring(contents)
+local function printer(debug, forceLog, contents)
+    contents = tostring(contents)
 
-  if not debug then
-    print(contents)
-  else
-    if not var.isDebug then return end
-    print(contents)
-  end
+    if not debug then
+        print(contents)
+    else
+        if not var.isDebug then return end
+        print(contents)
+    end
 
-  if forceLog then
-    spdlog.error(contents)
-  else
-    if not var.isDebug then return end
-    spdlog.error(contents)
-  end
+    if forceLog then
+        spdlog.error(contents)
+    else
+        if not var.isDebug then return end
+        spdlog.error(contents)
+    end
 end
 
 local function parser(type, ...)
-  local contents = {...}
+    local contents = {...}
 
-  if #contents == 0 then
-    local parsed = bracketizer(var.modName) .. " " .. bracketizer(type) .." " .. "No data found."
-    printer(parsed, true)
+    if #contents == 0 then
+        local parsed = bracketizer(var.modName) .. " " .. bracketizer(type) .." " .. "No data found."
+        printer(parsed, true)
 
-    return
-  end
+        return
+    end
 
-  for i, v in ipairs(contents) do
-    contents[i] = tostring(v)
-  end
+    for i, v in ipairs(contents) do
+        contents[i] = tostring(v)
+    end
 
-  return bracketizer(var.modName) .. " " .. bracketizer(type) .. " " .. table.concat(contents, " ")
+    return bracketizer(var.modName) .. " " .. bracketizer(type) .. " " .. table.concat(contents, " ")
 end
 
 function logger.debug(...)
-  printer(parser("debug", ...), false, true)
+    printer(true, true, parser("debug", ...))
 end
 
 function logger.error(...)
-  printer(parser("error", ...), true)
+    printer(false, true, parser("error", ...))
 end
 
 function logger.info(...)
-  printer(parser("info", ...))
+    printer(false, false, parser("info", ...))
 end
 
 function logger.warning(...)
-  printer(parser("warning", ...))
+    printer(false, false, parser("warning", ...))
 end
 
 ---@param bracketizeParameter number
 ---@param forceLog boolean
 ---@param ... any
 function logger.custom(bracketizeParameter, forceLog, ...)
-  local contents = {...}
+    local contents = {...}
 
-  if #contents == 0 then
-    logger.info()
+    if #contents == 0 then
+        logger.info()
 
-    return
-  end
-
-  for i, v in ipairs(contents) do
-    if i <= bracketizeParameter then
-      contents[i] = bracketizer(tostring(v))
-    else
-      contents[i] = tostring(v)
+        return
     end
-  end
 
-  local formattedContents = bracketizer(var.modName) .. " " .. table.concat(contents, " ")
+    for i, v in ipairs(contents) do
+        if i <= bracketizeParameter then
+            contents[i] = bracketizer(tostring(v))
+        else
+            contents[i] = tostring(v)
+        end
+    end
 
-  printer(formattedContents, forceLog)
+    local formattedContents = bracketizer(var.modName) .. " " .. table.concat(contents, " ")
+
+    printer(formattedContents, forceLog)
 end
 
 ---@param isDebug boolean
 function logger.setDebug(isDebug)
-  var.isDebug = isDebug
+    var.isDebug = isDebug
 end
 
 ---@param name string
 function logger.setModName(name)
-  var.modName = name
+    var.modName = name
 end
 
 return logger

@@ -10,7 +10,10 @@ trim_trailing_whitespace = true
 [*.{c,h,cpp,hpp}]
 indent_size = 4
 
-[*.{lua,reds}]
+[*.{lua}]
+indent_size = 4
+
+[*.{reds}]
 indent_size = 2
 
 [*.{md,yml}]
