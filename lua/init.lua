@@ -106,13 +106,13 @@ end
 -- Root Window
 ------------------
 
-local tabAboutVars = {
+local tabAbout = {
     pluginVersion = "",
     luaGuiVersion = "",
     licenses = ""
 }
 
-local tabHelpVars = {
+local tabHelp = {
     selectedTopic = "",
     selectedTopicContent = "",
     topicsPool = {},
@@ -134,11 +134,6 @@ local function initializeModSettings()
     end
 end
 
-local function nameFilterInstance(name)
-    return "RootWindow.SearchInput." .. name
-end
-
-
 local function openTabGameModules()
     local gameModules = appModules.gameModules
     local tabBarLabel = "RootWindow.TabBar"
@@ -153,10 +148,10 @@ local function drawTabAbout()
 
     ImGuiExt.TextAlt("Plugin Version:")
     ImGui.SameLine()
-    ImGuiExt.TextAlt(tabAboutVars.pluginVersion)
+    ImGuiExt.TextAlt(tabAbout.pluginVersion)
     ImGuiExt.TextAlt("Lua GUI Version:")
     ImGui.SameLine()
-    ImGuiExt.TextAlt(tabAboutVars.luaGuiVersion)
+    ImGuiExt.TextAlt(tabAbout.luaGuiVersion)
     ImGui.Text("")
     ImGuiExt.TextAlt("License & Third Party")
 
@@ -164,18 +159,18 @@ local function drawTabAbout()
                             itemWidth,
                             300 * ImGuiExt.GetScaleFactor(),
                             ImGuiWindowFlags.AlwaysHorizontalScrollbar)
-    ImGui.Text(tabAboutVars.licenses)
+    ImGui.Text(tabAbout.licenses)
     ImGui.EndChildFrame()
 
-    if tabAboutVars.pluginVersion ~= "" then return end
-    tabAboutVars.pluginVersion = Cyberlibs.Version()
-    tabAboutVars.luaGuiVersion = Cyberlibs.Version()
+    if tabAbout.pluginVersion ~= "" then return end
+    tabAbout.pluginVersion = Cyberlibs.Version()
+    tabAbout.luaGuiVersion = Cyberlibs.Version()
     local thirdparty = loadfile("thirdparty")
 
     if thirdparty ~= nil then
-        tabAboutVars.licenses = utils.indentString(Cyberlibs.__LICENSE .. "\n" .. thirdparty(), -20, true)
+        tabAbout.licenses = utils.indentString(Cyberlibs.__LICENSE .. "\n" .. thirdparty(), -20, true)
     else
-        tabAboutVars.licenses = utils.indentString(Cyberlibs.__LICENSE, -20, true)
+        tabAbout.licenses = utils.indentString(Cyberlibs.__LICENSE, -20, true)
     end
 end
 
@@ -190,13 +185,13 @@ local function drawHelpTreeNode(node, name, depth, nodePath)
     if isLeaf then
         flags = flags + ImGuiTreeNodeFlags.Leaf
 
-        if nodePath == tabHelpVars.selectedTopic then
+        if nodePath == tabHelp.selectedTopic then
             flags = flags + ImGuiTreeNodeFlags.Selected
             textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor('text')
         end
     end
 
-    if not tabHelpVars.states.isTreeContextPopup then
+    if not tabHelp.states.isTreeContextPopup then
         local rectMin = ImVec2.new()
         rectMin.x, rectMin.y = ImGui.GetCursorScreenPos()
         local contentRegionAvailX = ImGui.GetContentRegionAvail()
@@ -209,22 +204,24 @@ local function drawHelpTreeNode(node, name, depth, nodePath)
 
     ImGui.PushStyleColor(ImGuiCol.Text, textRed, textGreen, textBlue, textAlpha)
 
-    local shouldOpen = string.find(tabHelpVars.selectedTopic, "^" .. nodePath .. "%.")
+    local shouldOpen = string.find(tabHelp.selectedTopic, "^" .. nodePath .. "%.")
 
-    if tabHelpVars.commands.jumpToSelected and nodePath == tabHelpVars.selectedTopic then
+    if tabHelp.commands.jumpToSelected and nodePath == tabHelp.selectedTopic then
         ImGui.SetScrollHereY()
     end
 
     if not isLeaf then
         if shouldOpen then
-            if tabHelpVars.commands.jumpToSelected then
+            if tabHelp.commands.jumpToSelected then
                 ImGui.SetNextItemOpen(true)
-            elseif tabHelpVars.commands.collapseAll then
+            elseif tabHelp.commands.collapseAll then
                 ImGui.SetNextItemOpen(false)
             end
         else
-            if tabHelpVars.commands.collapseOther or tabHelpVars.commands.collapseAll then
+            if tabHelp.commands.collapseOther or tabHelp.commands.collapseAll then
                 ImGui.SetNextItemOpen(false)
+            elseif tabHelp.commands.openAll then
+                ImGui.SetNextItemOpen(true)
             end
         end
     end
@@ -232,8 +229,8 @@ local function drawHelpTreeNode(node, name, depth, nodePath)
     local isOpen = ImGui.TreeNodeEx(name .. "##" .. tostring(depth), flags)
 
     if ImGui.IsItemClicked() and isLeaf then
-        tabHelpVars.selectedTopic = nodePath
-        tabHelpVars.selectedTopicContent = utils.indentString(node, -20, true)
+        tabHelp.selectedTopic = nodePath
+        tabHelp.selectedTopicContent = utils.indentString(node, -20, true)
     end
 
     if isOpen then
@@ -267,49 +264,51 @@ local function drawTabHelp()
                             ImGuiWindowFlags.HorizontalScrollbar +
                             ImGuiWindowFlags.NoBackground)
 
-    if search.getFilterQuery(nameFilterInstance("Help")) == "" then
-        tabHelpVars.topicsPool = help.getTable()
+    if search.getFilterQuery("Help") == "" then
+        tabHelp.topicsPool = help.getTable()
     else
         if search.isFiltering() then
-            tabHelpVars.topicsPool = search.filter(help.getTable(), search.getFilterQuery(nameFilterInstance("Help")))
+            tabHelp.topicsPool = search.filter(help.getTable(), search.getFilterQuery("Help"))
+            tabHelp.commands.openAll = true
         end
     end
 
-    local sortedKeys = tables.assignKeysOrder(tabHelpVars.topicsPool)
+    local sortedKeys = tables.assignKeysOrder(tabHelp.topicsPool)
 
     for _, k in ipairs(sortedKeys) do
-        local v = tabHelpVars.topicsPool[k]
+        local v = tabHelp.topicsPool[k]
 
         drawHelpTreeNode(v, tostring(k), 0, tostring(k))
     end
 
-    tabHelpVars.commands.jumpToSelected = false
-    tabHelpVars.commands.collapseOther = false
-    tabHelpVars.commands.collapseAll = false
+    tabHelp.commands.jumpToSelected = false
+    tabHelp.commands.collapseOther = false
+    tabHelp.commands.collapseAll = false
+    tabHelp.commands.openAll = false
 
     ImGui.EndChildFrame()
 
     local contextPopup = "RootWindow.Help.TopicsTree.Popup"
 
     if ImGui.IsPopupOpen(contextPopup) then
-        tabHelpVars.states.isTreeContextPopup = true
+        tabHelp.states.isTreeContextPopup = true
     else
-        tabHelpVars.states.isTreeContextPopup = false
+        tabHelp.states.isTreeContextPopup = false
     end
 
     if ImGui.BeginPopupContextItem(contextPopup, ImGuiPopupFlags.MouseButtonRight) then
         if ImGui.MenuItem("Jump To Selection") then
-            tabHelpVars.commands.jumpToSelected = true
+            tabHelp.commands.jumpToSelected = true
         end
 
         ImGui.Separator()
 
         if ImGui.MenuItem("Collapse Others") then
-            tabHelpVars.commands.collapseOther = true
+            tabHelp.commands.collapseOther = true
         end
 
         if ImGui.MenuItem("Collapse All") then
-            tabHelpVars.commands.collapseAll = true
+            tabHelp.commands.collapseAll = true
         end
 
         ImGui.EndPopup()
@@ -317,7 +316,7 @@ local function drawTabHelp()
 
     ImGui.Spacing()
     ImGui.InputTextMultiline("##RootWindow.Help.Viewer",
-                                tabHelpVars.selectedTopicContent,
+                                tabHelp.selectedTopicContent,
                                 7000,
                                 itemWidth,
                                 300 * ImGuiExt.GetScaleFactor(),
@@ -357,7 +356,7 @@ local function drawTabSettings()
 
     ImGui.Text("")
     ImGuiExt.TextAlt("Window Theme:")
-    ImGuiExt.DrawWithItemWidth(300, true, "ThemesCombo")
+    ImGuiExt.DrawWithItemWidth(300 * ImGuiExt.GetScaleFactor(), true, "ThemesCombo")
     ImGuiExt.SetTooltip("Select mod's window theme.")
     ImGui.SameLine()
 
@@ -371,9 +370,10 @@ local function drawTabSettings()
     ImGuiExt.TextAlt("Debug:")
     ImGui.Separator()
 
-    debugBool, debugToggle = ImGuiExt.Checkbox("Enable debug mode", settings.isDebugMode(), debugToggle)
+    debugBool, debugToggle = ImGuiExt.Checkbox("Enable debug mode", settings.getModSetting('debugMode') or false, debugToggle)
     if debugToggle then
-        settings.setDebugMode(debugBool)
+        settings.setModSetting('debugMode', debugBool)
+        logger.setDebug(settings.getModSetting('debugMode'))
     end
 
     ImGui.Text("")
@@ -382,51 +382,23 @@ local function drawTabSettings()
         local width, height = GetDisplayResolution()
         local displayResolution = "Display Resolution: " .. width .. "x" .. height
         local aspectRatio = "Aspect Ratio: " .. (width / height)
+        local resolutionFactor = "Resolution Height Factor: " .. ImGuiExt.GetResolutionFactor()
         local scalingFactor = "UI Scale Factor: " .. ImGuiExt.GetScaleFactor()
         ImGui.Indent(40)
         ImGuiExt.TextAlt(displayResolution)
         ImGuiExt.TextAlt(aspectRatio)
+        ImGuiExt.TextAlt(resolutionFactor)
         ImGuiExt.TextAlt(scalingFactor)
-        ImGui.Unindent()
+        ImGui.Indent(-40)
         ImGui.Text("")
     end
 end
 
-local function getClosedTabsList(closedTabsTable)
-    local closedTabsList = {}
-
-    if next(closedTabsTable) then
-        local j = 1
-
-        for i = #closedTabsTable, 1, -1 do
-            closedTabsList[j] = {
-                label = closedTabsTable[i].label,
-                command = function() return ImGuiExt.AddTab("RootWindow.TabBar",
-                                                            closedTabsTable[i].label,
-                                                            closedTabsTable[i].title,
-                                                            closedTabsTable[i].callback,
-                                                            closedTabsTable[i].callbackParams)                                                         
-                                                        end
-            }
-            j = j + 1
-        end
-    end
-
-    return closedTabsList
-end
-
-local function drawRecentlyClosedTabsMenu()
-    if ImGui.BeginMenu("Recently Closed Tabs") then
-        local closedTabsList = getClosedTabsList(ImGuiExt.GetRecentlyClosedTabs("RootWindow.TabBar"))
-
-        if next(closedTabsList)then
-            for _, entry in ipairs(closedTabsList) do
-                if ImGui.MenuItem(entry.label) then
-                    entry.command()
-                end
-            end
-        else
-            ImGui.MenuItem("---")
+local function drawDebugMenu()
+    if ImGui.BeginMenu("Debug Menu") then
+        if ImGui.MenuItem("Print Active Tab Label") then
+            local activeTabLabel = ImGuiExt.GetActiveTabLabel("RootWindow.TabBar")
+            logger.debug(activeTabLabel)
         end
 
         ImGui.EndMenu()
@@ -438,45 +410,95 @@ local function drawRootPopupMenu()
         local tabBarLabel = "RootWindow.TabBar"
 
         for _, module in pairs(appModules) do
-            if ImGui.MenuItem(module.__NAME) then
+            local menuIcon
+
+            if module.__ICON then
+                menuIcon = module.__ICON
+            else
+                menuIcon = "    "
+            end
+
+            if ImGui.MenuItem(menuIcon .. " " ..  module.__NAME) then
                 ImGuiExt.AddTab(tabBarLabel, module.__NAME, module.__TITLE, module.draw)
             end
         end
 
         ImGui.Separator()
 
-        if ImGui.MenuItem("Close Other Tabs") then
-            ImGuiExt.CloseOtherTabs(tabBarLabel)
+        if ImGui.MenuItem(IconGlyphs.CloseBoxMultipleOutline .. " " .. "Close Inactive Tabs") then
+            ImGuiExt.CloseInactiveTabs(tabBarLabel)
         end
 
-        drawRecentlyClosedTabsMenu()
+        ImGuiExt.RecentlyClosedTabsMenu(IconGlyphs.DeleteOutline .. " " .. "Recently Closed Tabs", tabBarLabel)
         ImGui.Separator()
 
-        if ImGui.MenuItem("Settings") then
+        if ImGui.MenuItem(IconGlyphs.CogOutline .. " " ..  "Settings") then
             ImGuiExt.AddTab(tabBarLabel, "Settings", "Cyberlibs Settings", drawTabSettings)
         end
 
         ImGui.Separator()
 
-        if ImGui.MenuItem("Help") then
+        if ImGui.MenuItem(IconGlyphs.HelpCircleOutline .. " " ..  "Help") then
             ImGuiExt.AddTab(tabBarLabel, "Help", "Help Topics", drawTabHelp)
         end
 
-        if ImGui.MenuItem("About") then
+        if ImGui.MenuItem(IconGlyphs.InformationOutline .. " " ..  "About") then
             ImGuiExt.AddTab(tabBarLabel, "About", "About Cyberlibs", drawTabAbout)
+        end
+
+        if settings.getModSetting('debugMode') then
+            ImGui.Separator()
+            drawDebugMenu()
         end
 
         ImGui.EndPopup()
     end
 end
 
+local function drawTabBarContextMenu(regionPos, regionSize)
+    if ImGuiExt.IsMouseClickOverRegion(regionPos, regionSize, ImGuiMouseButton.Right) then
+        ImGui.OpenPopup("RootWindow.TabBar.PopupMenu")
+    end
+
+    if ImGui.BeginPopup("RootWindow.TabBar.PopupMenu") then
+        if ImGui.MenuItem(IconGlyphs.CloseBoxMultipleOutline .. " " .. "Close Inactive Tabs") then
+            ImGuiExt.CloseInactiveTabs("RootWindow.TabBar")
+        end
+
+        ImGuiExt.RecentlyClosedTabsMenu(IconGlyphs.DeleteOutline .. " " .. "Recently Closed Tabs", "RootWindow.TabBar")
+        ImGui.EndPopup()
+    end
+end
+
+local function getTabBarFlags()
+    local tabBarFlags = ImGuiTabBarFlags.Reorderable +
+                        ImGuiTabBarFlags.FittingPolicyScroll +
+                        ImGuiTabBarFlags.NoCloseWithMiddleMouseButton
+
+    local tabBarSettingsFlags = {
+        tabBarPopup = ImGuiTabBarFlags.TabListPopupButton +
+                        ImGuiTabBarFlags.NoTabListScrollingButtons,
+        tabCloseOnMiddleButtonClick = -ImGuiTabBarFlags.NoCloseWithMiddleMouseButton
+    }
+
+    if settings.getModSetting("tabBarPopup") then
+        tabBarFlags = tabBarFlags + tabBarSettingsFlags.tabBarPopup
+    end
+
+    if settings.getModSetting("tabCloseOnMiddleButtonClick") then
+        tabBarFlags = tabBarFlags + tabBarSettingsFlags.tabCloseOnMiddleButtonClick
+    end
+
+    return tabBarFlags
+end
+
 local function drawRootWindow()
     local activeTabLabel = ImGuiExt.GetActiveTabLabel("RootWindow.TabBar")
 
     if activeTabLabel == "" then
-        search.updateFilterInstance(nameFilterInstance("Default"))
+        search.updateFilterInstance("RootWindow.SearchInput.Default")
     else
-        search.updateFilterInstance(nameFilterInstance(activeTabLabel))
+        search.updateFilterInstance(activeTabLabel)
     end
 
     ImGuiExt.PushStyle()
@@ -485,16 +507,13 @@ local function drawRootWindow()
 
     if ImGui.Begin(Cyberlibs.__NAME) then
         local activeFilter = search.getActiveFilter()
+        local resolutionFactor = ImGuiExt.GetResolutionFactor()
         local windowWidth = ImGui.GetWindowWidth()
         local windowPadding = ImGui.GetStyle().WindowPadding
         local itemSpacing = ImGui.GetStyle().ItemSpacing
         local dotsWidth = ImGui.CalcTextSize(IconGlyphs.DotsVertical)
+        local regionPos = {}
         local dummyText = "Open a Cyberlibs module to start."
-        local tabBarSettingsFlags = {
-            tabBarPopup = ImGuiTabBarFlags.TabListPopupButton +
-                            ImGuiTabBarFlags.NoTabListScrollingButtons,
-            tabCloseOnMiddleButtonClick = -ImGuiTabBarFlags.NoCloseWithMiddleMouseButton
-        }
 
         activeFilter.query, activeFilter.isTyped = ImGuiExt.SearchInput(activeFilter.label,
                                                                         activeFilter.query,
@@ -511,25 +530,18 @@ local function drawRootWindow()
         drawRootPopupMenu()
         ImGui.Separator()
 
-        local tabBarFlags = ImGuiTabBarFlags.Reorderable +
-                            ImGuiTabBarFlags.FittingPolicyScroll +
-                            ImGuiTabBarFlags.NoCloseWithMiddleMouseButton
+        regionPos.x, regionPos.y = ImGui.GetCursorScreenPos()
 
-        if settings.getModSetting("tabBarPopup") then
-            tabBarFlags = tabBarFlags + tabBarSettingsFlags.tabBarPopup
-        end
-
-        if settings.getModSetting("tabCloseOnMiddleButtonClick") then
-            tabBarFlags = tabBarFlags + tabBarSettingsFlags.tabCloseOnMiddleButtonClick
-        end
-
-        if not ImGuiExt.TabBar("RootWindow.TabBar", tabBarFlags) then
-            ImGui.Dummy(100, 120)
+        if not ImGuiExt.TabBar("RootWindow.TabBar", getTabBarFlags()) then
+            ImGui.Dummy(100, 30 * resolutionFactor)
             ImGuiExt.AlignNextItemToWindowCenter(ImGui.CalcTextSize(dummyText), windowWidth, windowPadding.x)
             ImGuiExt.TextAlt(dummyText)
-            ImGui.Dummy(100, 120)
+            ImGui.Dummy(100, 30 * resolutionFactor)
         end
 
+        local regionSize = ImVec2.new(windowWidth, 8 * resolutionFactor)
+
+        drawTabBarContextMenu(regionPos, regionSize)
         ImGuiExt.StatusBarAlt(ImGuiExt.GetStatusBar())
     end
 
@@ -548,7 +560,7 @@ registerForEvent("onInit", function()
 
     publicApi.onInit()
     settings.onInit()
-    logger.setDebug(settings.isDebugMode())
+    logger.setDebug(settings.getModSetting('debugMode'))
     ImGuiExt.onInit(settings.getModSetting("windowTheme"), Cyberlibs.Version() ..
                                             Cyberlibs.__VERSION_SUFFIX ..
                                             "-" ..
@@ -573,7 +585,7 @@ registerForEvent("onOverlayClose", function()
     search.flushBrowse()
     settings.onOverlayClose()
 
-    logger.setDebug(settings.isDebugMode())
+    logger.setDebug(settings.getModSetting('debugMode'))
 end)
 
 registerForEvent("onUpdate", function(deltaTime)

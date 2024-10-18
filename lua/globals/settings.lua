@@ -38,8 +38,6 @@ end
 ------------------
 
 local function loadModSettings(newSettings)
-    modSettings.debugMode = newSettings and newSettings.debugMode or false
-
     if newSettings == nil then return end
 
     for setting, value in pairs(newSettings) do
@@ -49,18 +47,6 @@ end
 
 local function saveModSettings()
     settings.writeUserSettings("modSettings", modSettings)
-end
-
----@return boolean
-function settings.isDebugMode()
-    return modSettings.debugMode
-end
-
----@param isDebugMode boolean
-function settings.setDebugMode(isDebugMode)
-    modSettings.debugMode = isDebugMode
-
-    saveRequest()
 end
 
 ---@param name string

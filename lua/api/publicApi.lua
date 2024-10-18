@@ -88,7 +88,8 @@ end
 function publicApi.GetVersion(fileNameOrPath)
   local versions = require("knowledgeBase/versions")
   search.setBrowseInstance('getVersion', versions.getTable())
-  local isData = search.followBrowseItem('getVersion', fileNameOrPath)
+  local fileName = utils.getFileName(fileNameOrPath)
+  local isData = search.followBrowseItem('getVersion', fileName)
   local version
 
   if isData then

@@ -85,6 +85,14 @@ function utils.getFileName(path)
     return path:match(".*[/\\](.+)$") or path
 end
 
+function utils.normalizePath(path)
+    path = path:gsub("\\", "/")
+    path = path:lower()
+    path = path:gsub("^%a:", "")
+    path = path:gsub("^/", "")
+    return path
+end
+
 ------------------
 -- JSON
 

@@ -73,6 +73,11 @@ function ImGuiExt.GetAspectRatio()
 end
 
 ---@return number
+function ImGuiExt.GetResolutionFactor()
+    return var.screen.height / 360
+end
+
+---@return number
 function ImGuiExt.GetScaleFactor()
     return var.scaleFactor
 end
@@ -166,6 +171,26 @@ function ImGuiExt.DrawWithItemWidth(itemWidth, horizontalScaling, funcName, ...)
     ImGui.SetNextItemWidth(itemWidth * scaling)
 
     return ImGuiExt[funcName](...)
+end
+
+---@param regionPos Vector2|ImVec2|table
+---@param regionSize Vector2|ImVec2|table
+---@param mouseButton number
+---@return boolean
+function ImGuiExt.IsMouseClickOverRegion(regionPos, regionSize, mouseButton)
+    local hovered = ImGui.IsMouseHoveringRect(regionPos.x, regionPos.y, regionPos.x + regionSize.x, regionPos.y + regionSize.y)
+    local clicked = hovered and ImGui.IsMouseClicked(mouseButton)
+  
+    return clicked
+end
+
+---@param regionPos Vector2|ImVec2|table
+---@param regionSize Vector2|ImVec2|table
+---@return boolean
+function ImGuiExt.IsMouseHoverOverRegion(regionPos, regionSize)
+    local hovered = ImGui.IsMouseHoveringRect(regionPos.x, regionPos.y, regionPos.x + regionSize.x, regionPos.y + regionSize.y)
+  
+    return hovered
 end
 
 ------------------
@@ -489,6 +514,7 @@ end
 
 ---@param tabBarLabel string
 ---@param flags integer
+---@return boolean
 function ImGuiExt.TabBar(tabBarLabel, flags)
     if tabBars[tabBarLabel] == nil then
         initializeTabBar(tabBarLabel)
@@ -568,7 +594,7 @@ function ImGuiExt.TabBar(tabBarLabel, flags)
 end
 
 ---@param tabBarLabel string
-function ImGuiExt.CloseOtherTabs(tabBarLabel)
+function ImGuiExt.CloseInactiveTabs(tabBarLabel)
     if tabBars[tabBarLabel] == nil then return end
     local tabBar = tabBars[tabBarLabel]
 
@@ -589,10 +615,36 @@ function ImGuiExt.CloseOtherTabs(tabBarLabel)
 
             table.insert(tabBar.recentlyClosedTabs, tab)
             tabBar.tabs[item] = nil
-            tabBar.recentlyClosedTabs[closedNumber].isOld = nil
-            tabBar.recentlyClosedTabs[closedNumber].isOpen = nil
+
+            if tabBar.recentlyClosedTabs[closedNumber] ~= nil  then
+                tabBar.recentlyClosedTabs[closedNumber].isOld = nil
+                tabBar.recentlyClosedTabs[closedNumber].isOpen = nil
+            end
         end
     end
+end
+
+local function getClosedTabsList(tabBarLabel, closedTabsTable)
+    local closedTabsList = {}
+
+    if closedTabsTable ~= nil and next(closedTabsTable) then
+        local j = 1
+
+        for i = #closedTabsTable, 1, -1 do
+            closedTabsList[j] = {
+                label = closedTabsTable[i].label,
+                command = function() return ImGuiExt.AddTab(tabBarLabel,
+                                                            closedTabsTable[i].label,
+                                                            closedTabsTable[i].title,
+                                                            closedTabsTable[i].callback,
+                                                            closedTabsTable[i].callbackParams)                                                      
+                                                        end
+            }
+            j = j + 1
+        end
+    end
+
+    return closedTabsList
 end
 
 ---@param tabBarLabel string
@@ -601,6 +653,24 @@ function ImGuiExt.GetRecentlyClosedTabs(tabBarLabel)
     if tabBars[tabBarLabel] == nil then return {} end
 
     return tabBars[tabBarLabel].recentlyClosedTabs
+end
+
+function ImGuiExt.RecentlyClosedTabsMenu(menuLabel, tabBarLabel)
+    if ImGui.BeginMenu(menuLabel) then
+        local closedTabsList = getClosedTabsList(tabBarLabel, ImGuiExt.GetRecentlyClosedTabs(tabBarLabel))
+
+        if next(closedTabsList)then
+            for _, entry in ipairs(closedTabsList) do
+                if ImGui.MenuItem(entry.label) then
+                    entry.command()
+                end
+            end
+        else
+            ImGui.MenuItem("---")
+        end
+
+        ImGui.EndMenu()
+    end
 end
 
 ------------------

@@ -233,18 +233,50 @@ function search.updateFilterInstance(instanceName)
     search.setActiveFilterInstance(instanceName)
 end
 
-local function filterTable(t, query, results, path)
-    for k, v in pairs(t) do
-        local currentPath = path and (path .. "." .. tostring(k)) or tostring(k)
-    
-        if type(v) == "table" then
-            filterTable(v, query, results, currentPath)
-        else
-            local stringValue = tostring(v)
+local function filterElements(k, v, query)
+    return string.find(string.lower(tostring(k)), string.lower(query), 1, true) or
+            string.find(string.lower(tostring(v)), string.lower(query), 1, true)
+end
 
-            if stringFind(stringLower(tostring(k)), stringLower(query), 1, true) or
-                 stringFind(stringLower(stringValue), stringLower(query), 1, true) then
-                results[currentPath] = stringValue
+local function filterTable(t, query, results)
+    for k, v in pairs(t) do
+        local matches = false
+        local subResults = {}
+        
+        if type(v) == "table" then
+            if type(next(v)) == "string" and type(k) ~= "string" then
+                for subK, subV in pairs(v) do
+                    if filterElements(subK, subV, query) then
+                        matches = true
+                        break
+                    end
+                end
+            else
+                filterTable(v, query, subResults)
+            end
+
+            if next(subResults) then
+                matches = true
+            end
+        else
+            if filterElements(k, v, query) then
+                matches = true
+            end
+        end
+
+        if matches then
+            if type(k) == "number" then
+                if next(subResults) ~= nil then
+                    table.insert(results, subResults)
+                else
+                    table.insert(results, v)
+                end
+            else
+                if next(subResults) ~= nil then
+                    results[k] = subResults
+                else
+                    results[k] = v
+                end
             end
         end
     end
