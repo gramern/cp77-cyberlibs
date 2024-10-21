@@ -212,6 +212,10 @@ local function drawViewerRow(label, value, rowWidth, labelWidth)
     ImGui.EndGroup()
 end
 
+local function drawTableCellTooltip(text)
+    ImGuiExt.SetTooltip(text)
+end
+
 local function drawPopupContextExportTable(exportLabel, popupLabel, copyValue, copyValueLabel)
     if ImGui.IsPopupOpen(popupLabel) then
         widgetState[exportLabel].isContextPopup = true
@@ -278,6 +282,8 @@ local function drawExportTable(exportLabel, export, itemWidth)
         if ImGuiExt.IsMouseHoverOverRegion(summaryPos, summarySize) then
             widgetState[exportLabel].hovered = summary
 
+            drawTableCellTooltip(summary)
+
             if ImGui.IsMouseClicked(ImGuiMouseButton.Right) then
                 widgetState[exportLabel].clicked = summary
             end
@@ -295,6 +301,8 @@ local function drawExportTable(exportLabel, export, itemWidth)
 
             if ImGuiExt.IsMouseHoverOverRegion(entryPos, entrySize) then
                 widgetState[exportLabel].hovered = entryName
+
+                drawTableCellTooltip(entryName)
 
                 if ImGui.IsMouseClicked(ImGuiMouseButton.Right) then
                     widgetState[exportLabel].clicked = entryName
@@ -315,6 +323,8 @@ local function drawExportTable(exportLabel, export, itemWidth)
             if ImGuiExt.IsMouseHoverOverRegion(ordinalPos, ordinalSize) then
                 widgetState[exportLabel].hovered = ordinal
 
+                drawTableCellTooltip(ordinal)
+
                 if ImGui.IsMouseClicked(ImGuiMouseButton.Right) then
                     widgetState[exportLabel].clicked = ordinal
                 end
@@ -334,6 +344,8 @@ local function drawExportTable(exportLabel, export, itemWidth)
             if ImGuiExt.IsMouseHoverOverRegion(rvaPos, rvaSize) then
                 widgetState[exportLabel].hovered = rva
 
+                drawTableCellTooltip(rva)
+
                 if ImGui.IsMouseClicked(ImGuiMouseButton.Right) then
                     widgetState[exportLabel].clicked = rva
                 end
@@ -352,6 +364,8 @@ local function drawExportTable(exportLabel, export, itemWidth)
 
             if ImGuiExt.IsMouseHoverOverRegion(forwarderPos, forwarderSize) then
                 widgetState[exportLabel].hovered = forwarder
+
+                drawTableCellTooltip(forwarder)
 
                 if ImGui.IsMouseClicked(ImGuiMouseButton.Right) then
                     widgetState[exportLabel].clicked = forwarder
@@ -490,6 +504,8 @@ local function drawImportTreeNode(node, importName, importLabel)
 
                     if ImGuiExt.IsMouseHoverOverRegion(entryPos, entrySize) then
                         widgetState[importLabel].hovered = entryName
+
+                        drawTableCellTooltip(entryName)
 
                         if ImGui.IsMouseClicked(ImGuiMouseButton.Right) then
                             widgetState[importLabel].clicked = entryName
