@@ -136,17 +136,26 @@ function tables.retrieveTable(func, maxDepth)
 end
 
 ---@param t table
+---@param enumerate boolean?
 ---@return string|nil
-function tables.tableToString(t)
+function tables.tableToString(t, enumerate)
     if t == nil then return nil end
 
     local result = "{"
 
     for k, v in pairs(t) do
         if type(v) == "table" then
-            result = result .. k .. " = " .. tables.tableToString(v) .. ", "
+            if type(k) == "string" or enumerate then
+                result = result .. k .. " = " .. tables.tableToString(v, true) .. ", "
+            else
+                result = result .. tables.tableToString(v) .. ", "
+            end
         else
-            result = result .. k .. " = " .. tostring(v) .. ", "
+            if type(k) == "string" or enumerate then
+                result = result .. k .. " = " .. tostring(v) .. ", "
+            else
+                result = result .. tostring(v) .. ", "
+            end
         end
     end
 

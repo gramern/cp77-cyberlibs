@@ -58,6 +58,10 @@ local publicApi = require("api/publicApi")
 
 local appApi = {}
 
+function appApi.IsRootWindow()
+    return isRootWindow
+end
+
 ------------------
 -- App Modules
 ------------------
@@ -143,9 +147,10 @@ local function openTabGameModules()
     end
 end
 
-local function drawTabAbout()
+local function drawAboutTab()
     local itemWidth = ImGui.GetWindowWidth() - 2 * ImGui.GetStyle().WindowPadding.x
 
+    search.updateFilterInstance("RootWindow.AboutTab")
     ImGuiExt.TextAlt("Plugin Version:")
     ImGui.SameLine()
     ImGuiExt.TextAlt(tabAbout.pluginVersion)
@@ -157,7 +162,7 @@ local function drawTabAbout()
 
     ImGui.BeginChildFrame(ImGui.GetID("HelpTopicView"),
                             itemWidth,
-                            300 * ImGuiExt.GetScaleFactor(),
+                            400 * ImGuiExt.GetScaleFactor(),
                             ImGuiWindowFlags.AlwaysHorizontalScrollbar)
     ImGui.Text(tabAbout.licenses)
     ImGui.EndChildFrame()
@@ -192,12 +197,12 @@ local function drawHelpTreeNode(node, name, depth, nodePath)
     end
 
     if not tabHelp.states.isTreeContextPopup then
-        local rectMin = ImVec2.new()
-        rectMin.x, rectMin.y = ImGui.GetCursorScreenPos()
+        local rectPos = ImVec2.new()
+        rectPos.x, rectPos.y = ImGui.GetCursorScreenPos()
         local contentRegionAvailX = ImGui.GetContentRegionAvail()
-        local rectMax = ImVec2.new(rectMin.x + contentRegionAvailX, rectMin.y + ImGui.GetFrameHeight())
+        local rectSize = ImVec2.new(rectPos.x + contentRegionAvailX, rectPos.y + ImGui.GetFrameHeight())
 
-        if ImGui.IsMouseHoveringRect(rectMin.x, rectMin.y, rectMax.x, rectMax.y - 10) then
+        if ImGui.IsMouseHoveringRect(rectPos.x, rectPos.y, rectSize.x, rectSize.y - 10) then
             textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor('text')
         end
     end
@@ -255,7 +260,7 @@ local function drawHelpTreeNode(node, name, depth, nodePath)
     ImGui.PopStyleColor()
 end
 
-local function drawTabHelp()
+local function drawHelpTab()
     local itemWidth = ImGui.GetWindowWidth() - 2 * ImGui.GetStyle().WindowPadding.x
 
     ImGui.BeginChildFrame(ImGui.GetID("RootWindow.Help.TopicsTree"),
@@ -264,13 +269,17 @@ local function drawTabHelp()
                             ImGuiWindowFlags.HorizontalScrollbar +
                             ImGuiWindowFlags.NoBackground)
 
-    if search.getFilterQuery("Help") == "" then
+    search.updateFilterInstance("RootWindow.HelpTab")
+
+    if search.getFilterQuery("RootWindow.HelpTab") == "" then
         tabHelp.topicsPool = help.getTable()
     else
-        if search.isFiltering() then
-            tabHelp.topicsPool = search.filter(help.getTable(), search.getFilterQuery("Help"))
-            tabHelp.commands.openAll = true
+        if ImGuiExt.IsSearchInputTyped(search.getActiveFilter().label) then
+            search.setFiltering(true)
         end
+
+        tabHelp.topicsPool = search.filter("RootWindow.HelpTab", help.getTable(), search.getFilterQuery("RootWindow.HelpTab"))
+        tabHelp.commands.openAll = true
     end
 
     local sortedKeys = tables.assignKeysOrder(tabHelp.topicsPool)
@@ -297,17 +306,17 @@ local function drawTabHelp()
     end
 
     if ImGui.BeginPopupContextItem(contextPopup, ImGuiPopupFlags.MouseButtonRight) then
-        if ImGui.MenuItem("Jump To Selection") then
+        if ImGui.MenuItem(IconGlyphs.ArrowTopLeft .. " " .. "Jump To Selection") then
             tabHelp.commands.jumpToSelected = true
         end
 
         ImGui.Separator()
 
-        if ImGui.MenuItem("Collapse Others") then
+        if ImGui.MenuItem(IconGlyphs.MinusBoxMultipleOutline .. " " .. "Collapse Others") then
             tabHelp.commands.collapseOther = true
         end
 
-        if ImGui.MenuItem("Collapse All") then
+        if ImGui.MenuItem(IconGlyphs.CollapseAllOutline .. " " .. "Collapse All") then
             tabHelp.commands.collapseAll = true
         end
 
@@ -317,18 +326,24 @@ local function drawTabHelp()
     ImGui.Spacing()
     ImGui.InputTextMultiline("##RootWindow.Help.Viewer",
                                 tabHelp.selectedTopicContent,
-                                7000,
+                                32768,
                                 itemWidth,
                                 300 * ImGuiExt.GetScaleFactor(),
                                 ImGuiInputTextFlags.ReadOnly)
+    
+    if ImGui.BeginPopupContextItem("RootWindow.Help.Viewer", ImGuiPopupFlags.MouseButtonRight) then
+        ImGuiExt.MenuItemCopyValue(tabHelp.selectedTopicContent, "Topic")
+        ImGui.EndPopup()
+    end
 end
 
-local function drawTabSettings()
+local function drawSettingsTab()
     local debugBool, debugToggle
     local tabBarPopupBool, tabBarPopupToggle
     local tabOnMiddleClickBool, tabOnMiddleClickToggle
     local tooltipsBool, tooltipsToggle
 
+    search.updateFilterInstance("RootWindow.SettingsTab")
     ImGui.Spacing()
     ImGuiExt.TextAlt("User Interface:")
     ImGui.Separator()
@@ -429,21 +444,21 @@ local function drawRootPopupMenu()
             ImGuiExt.CloseInactiveTabs(tabBarLabel)
         end
 
-        ImGuiExt.RecentlyClosedTabsMenu(IconGlyphs.DeleteOutline .. " " .. "Recently Closed Tabs", tabBarLabel)
+        ImGuiExt.BeginMenuRecentlyClosedTabs(IconGlyphs.DeleteOutline .. " " .. "Recently Closed Tabs", tabBarLabel)
         ImGui.Separator()
 
         if ImGui.MenuItem(IconGlyphs.CogOutline .. " " ..  "Settings") then
-            ImGuiExt.AddTab(tabBarLabel, "Settings", "Cyberlibs Settings", drawTabSettings)
+            ImGuiExt.AddTab(tabBarLabel, "Settings", "Cyberlibs Settings", drawSettingsTab)
         end
 
         ImGui.Separator()
 
         if ImGui.MenuItem(IconGlyphs.HelpCircleOutline .. " " ..  "Help") then
-            ImGuiExt.AddTab(tabBarLabel, "Help", "Help Topics", drawTabHelp)
+            ImGuiExt.AddTab(tabBarLabel, "Help", "Help Topics", drawHelpTab)
         end
 
         if ImGui.MenuItem(IconGlyphs.InformationOutline .. " " ..  "About") then
-            ImGuiExt.AddTab(tabBarLabel, "About", "About Cyberlibs", drawTabAbout)
+            ImGuiExt.AddTab(tabBarLabel, "About", "About Cyberlibs", drawAboutTab)
         end
 
         if settings.getModSetting('debugMode') then
@@ -465,7 +480,7 @@ local function drawTabBarContextMenu(regionPos, regionSize)
             ImGuiExt.CloseInactiveTabs("RootWindow.TabBar")
         end
 
-        ImGuiExt.RecentlyClosedTabsMenu(IconGlyphs.DeleteOutline .. " " .. "Recently Closed Tabs", "RootWindow.TabBar")
+        ImGuiExt.BeginMenuRecentlyClosedTabs(IconGlyphs.DeleteOutline .. " " .. "Recently Closed Tabs", "RootWindow.TabBar")
         ImGui.EndPopup()
     end
 end
@@ -497,8 +512,7 @@ local function drawRootWindow()
 
     if activeTabLabel == "" then
         search.updateFilterInstance("RootWindow.SearchInput.Default")
-    else
-        search.updateFilterInstance(activeTabLabel)
+        ImGuiExt.ResetStatusBar()
     end
 
     ImGuiExt.PushStyle()
@@ -515,14 +529,17 @@ local function drawRootWindow()
         local regionPos = {}
         local dummyText = "Open a Cyberlibs module to start."
 
-        activeFilter.query, activeFilter.isTyped = ImGuiExt.SearchInput(activeFilter.label,
-                                                                        activeFilter.query,
-                                                                        "Search...",
-                                                                        windowWidth - (windowPadding.x * 2) - itemSpacing.x - dotsWidth - 12)
-        if activeFilter.isTyped then
-            search.setFiltering(true)
+        activeFilter.query = ImGuiExt.SearchInput(activeFilter.label,
+                                                    activeFilter.query,
+                                                    "Search...",
+                                                    windowWidth - (windowPadding.x * 2) - itemSpacing.x - dotsWidth - 12)
 
+        if ImGuiExt.IsSearchInputTyped(activeFilter.label) then
             utils.SetDelay(1, "RootWindow.SearchInput", search.setFiltering, false)
+        end
+
+        if settings.getModSetting('debugMode') and search.isFiltering() then
+            logger.debug("Filtering", activeFilter.label, "for query:", activeFilter.query)
         end
 
         ImGui.SameLine()
@@ -534,7 +551,7 @@ local function drawRootWindow()
 
         if not ImGuiExt.TabBar("RootWindow.TabBar", getTabBarFlags()) then
             ImGui.Dummy(100, 30 * resolutionFactor)
-            ImGuiExt.AlignNextItemToWindowCenter(ImGui.CalcTextSize(dummyText), windowWidth, windowPadding.x)
+            ImGuiExt.AlignNextItemToCenter(ImGui.CalcTextSize(dummyText), windowWidth, windowPadding.x)
             ImGuiExt.TextAlt(dummyText)
             ImGui.Dummy(100, 30 * resolutionFactor)
         end
@@ -583,6 +600,7 @@ registerForEvent("onOverlayClose", function()
     isRootWindow = false
 
     search.flushBrowse()
+    search.flushFilter()
     settings.onOverlayClose()
 
     logger.setDebug(settings.getModSetting('debugMode'))
@@ -601,3 +619,18 @@ registerForEvent("onDraw", function()
 end)
 
 return Cyberlibs
+
+--                000000                00    0000                       00                     000          000    0     0000                    
+--             00000000  00      0000000000000000000     000000000000000000000000000          0000          0000000000000000000         000000000 
+--           000000000  000     000000000    000000     000000  00000000000000000000        0000          00000000000    000000  00000000    0000 
+--        00000   000  000    0000   000  000000       000      000  0000   000000         000           0000   000   000000   00000      00000   
+--      00000         000   0000   0000000000        00000000000    000000000000         0000           000    0000000000     000       0000      
+--     0000          000  00000   000000000         00000000000    00000000            0000           0000    000000000        00000              
+--    000      00   0000 0000    000  00000000     0000           0000000000          000            000    000  000000000        000000          
+--   000   00000    0000000     00      000000   0000     000000000      00000      0000   000000000000    000     000000    000      000         
+--  000 00000      000000     000   000000      0000000000000   00          0000  00000000000000  0000    000   000000     000     00000          
+-- 0000000         00000      0  00000        0000000          00             00000000000        0000    00  00000       000000000000             
+--  00             000                         0              00                  00                                    000000000                 
+--                000                                                                                                    0                        
+--               00                                                                                                                               
+--              00 

@@ -198,24 +198,24 @@ end
 ------------------
 
 ---@param itemWidth number
----@param windowWidth number
----@param windowPadding number
+---@param regionWidth number
+---@param padding number
 ---@param horizontalScaling boolean?
-function ImGuiExt.AlignNextItemToWindowCenter(itemWidth, windowWidth, windowPadding, horizontalScaling)
-    windowPadding = windowPadding * 2
+function ImGuiExt.AlignNextItemToCenter(itemWidth, regionWidth, padding, horizontalScaling)
+    padding = padding * 2
     local scaling = horizontalScaling and var.scaleFactor or 1
-    local startX = (windowWidth - windowPadding - itemWidth * scaling) * 0.5
+    local startX = (regionWidth - padding - itemWidth * scaling) * 0.5
     ImGui.SetCursorPosX(startX)
     ImGui.SetNextItemWidth(itemWidth * scaling)
 end
 
 ---@param itemWidth number
----@param windowWidth number
----@param windowPadding number
+---@param regionWidth number
+---@param padding number
 ---@param horizontalScaling boolean?
-function ImGuiExt.AlignNextItemToWindowRight(itemWidth, windowWidth, windowPadding, horizontalScaling)
+function ImGuiExt.AlignNextItemToRight(itemWidth, regionWidth, padding, horizontalScaling)
     local scaling = horizontalScaling and var.scaleFactor or 1
-    local startX = windowWidth - (itemWidth * scaling) - windowPadding
+    local startX = regionWidth - (itemWidth * scaling) - padding
     ImGui.SetCursorPosX(startX)
     ImGui.SetNextItemWidth(itemWidth * scaling)
 end
@@ -247,6 +247,32 @@ function ImGuiExt.SetTooltip(text)
 end
 
 ------------------
+-- Context Popup
+------------------
+
+---@param value any
+---@param valueLabel string?
+function ImGuiExt.MenuItemCopyValue(value, valueLabel)
+    local command
+
+    if value and value ~= "" and value ~= "-" and value ~= "Unknown" and value ~= 0 then
+        if valueLabel then
+            command = IconGlyphs.ContentCopy .. " " .. "Copy " .. valueLabel
+        else
+            command = IconGlyphs.ContentCopy .. " " .. "Copy"
+        end
+
+        if ImGui.MenuItem(command) then
+            ImGui.SetClipboardText(tostring(value))
+        end
+    else
+        command = IconGlyphs.CheckboxBlankOffOutline .. " " .. "Nothing To Copy"
+
+        ImGui.MenuItem(command)
+    end
+end
+
+------------------
 -- Draw text
 ------------------
 
@@ -266,18 +292,6 @@ function ImGuiExt.TextAlt(text, wrap)
 end
 
 ---@param text string
----@param charCount number
----@param fontScale number
-function ImGuiExt.TextTitle(text, charCount, fontScale)
-    ImGui.PushStyleColor(ImGuiCol.Text, activeTheme.textTitle[1], activeTheme.textTitle[2], activeTheme.textTitle[3], activeTheme.textTitle[4])
-
-    ImGui.SetWindowFontScale(fontScale)
-    ImGui.TextWrapped(utils.trimString(text, charCount))
-    ImGui.PopStyleColor()
-    ImGui.SetWindowFontScale(1.0)
-end
-
----@param text string
 ---@param red number
 ---@param green number
 ---@param blue number
@@ -293,6 +307,56 @@ function ImGuiExt.TextColor(text, red, green, blue, alpha, wrap)
     end
 
     ImGui.TextWrapped(text)
+    ImGui.PopStyleColor()
+end
+
+---@param text string
+---@param fontScale number
+---@param wrap boolean?
+function ImGuiExt.TextScale(text, fontScale, wrap)
+    ImGui.PushStyleColor(ImGuiCol.Text, activeTheme.text[1], activeTheme.text[2], activeTheme.text[3], activeTheme.text[4])
+    ImGui.SetWindowFontScale(fontScale)
+
+    if not wrap then
+        ImGui.Text(text)
+        ImGui.SetWindowFontScale(1.0)
+        ImGui.PopStyleColor()
+        return
+    end
+
+    ImGui.TextWrapped(text)
+    ImGui.SetWindowFontScale(1.0)
+    ImGui.PopStyleColor()
+end
+
+---@param text string
+---@param fontScale number
+---@param wrap boolean?
+function ImGuiExt.TextAltScale(text, fontScale, wrap)
+    ImGui.PushStyleColor(ImGuiCol.Text, activeTheme.textAlt[1], activeTheme.textAlt[2], activeTheme.textAlt[3], activeTheme.textAlt[4])
+    ImGui.SetWindowFontScale(fontScale)
+
+    if not wrap then
+        ImGui.Text(text)
+        ImGui.SetWindowFontScale(1.0)
+        ImGui.PopStyleColor()
+        return
+    end
+
+    ImGui.TextWrapped(text)
+    ImGui.SetWindowFontScale(1.0)
+    ImGui.PopStyleColor()
+end
+
+---@param text string
+---@param charCount number
+---@param fontScale number
+function ImGuiExt.TextTitle(text, charCount, fontScale)
+    ImGui.PushStyleColor(ImGuiCol.Text, activeTheme.textTitle[1], activeTheme.textTitle[2], activeTheme.textTitle[3], activeTheme.textTitle[4])
+
+    ImGui.SetWindowFontScale(fontScale)
+    ImGui.TextWrapped(utils.trimString(text, charCount))
+    ImGui.SetWindowFontScale(1.0)
     ImGui.PopStyleColor()
 end
 
@@ -340,6 +404,7 @@ end
 local function intializeSearchInput(label, hint)
     searchInputs[label] = {
         hint = IconGlyphs.Magnify .. " " .. hint,
+        isActive = nil,
         isTyped = nil,
         newLabel = "##" .. label,
         newQuery = "",
@@ -352,6 +417,7 @@ end
 ---@param itemWidth number
 ---@param horizontalScaling boolean?
 ---@return string
+---@return boolean
 ---@return boolean
 function ImGuiExt.SearchInput(label, query, hint, itemWidth, horizontalScaling)
     if searchInputs[label] == nil then
@@ -373,11 +439,35 @@ function ImGuiExt.SearchInput(label, query, hint, itemWidth, horizontalScaling)
                                                                                         40,
                                                                                         ImGuiInputTextFlags.AutoSelectAll)
 
+    if ImGui.IsItemActive() then
+        searchInputs[label].isActive = true
+    else
+        searchInputs[label].isActive = false
+    end
+
     if query ~= searchInputs[label].hint and string.find(searchInputs[label].newQuery, IconGlyphs.Magnify, 1, true) then
         searchInputs[label].newQuery = ""
     end
 
-    return searchInputs[label].newQuery, searchInputs[label].isTyped
+    return searchInputs[label].newQuery, searchInputs[label].isTyped, searchInputs[label].isActive
+end
+
+---@return boolean
+function ImGuiExt.IsSearchInputActive(label)
+    if searchInputs[label] ~= nil then
+        return searchInputs[label].isActive
+    else
+        return false
+    end
+end
+
+---@return boolean
+function ImGuiExt.IsSearchInputTyped(label)
+    if searchInputs[label] ~= nil then
+        return searchInputs[label].isTyped
+    else
+        return false
+    end
 end
 
 ------------------
@@ -655,7 +745,7 @@ function ImGuiExt.GetRecentlyClosedTabs(tabBarLabel)
     return tabBars[tabBarLabel].recentlyClosedTabs
 end
 
-function ImGuiExt.RecentlyClosedTabsMenu(menuLabel, tabBarLabel)
+function ImGuiExt.BeginMenuRecentlyClosedTabs(menuLabel, tabBarLabel)
     if ImGui.BeginMenu(menuLabel) then
         local closedTabsList = getClosedTabsList(tabBarLabel, ImGuiExt.GetRecentlyClosedTabs(tabBarLabel))
 

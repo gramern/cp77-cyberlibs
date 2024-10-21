@@ -88,7 +88,7 @@ function logger.custom(bracketizeParameter, forceLog, ...)
 
     local formattedContents = bracketizer(var.modName) .. " " .. table.concat(contents, " ")
 
-    printer(formattedContents, forceLog)
+    printer(false,  forceLog, formattedContents)
 end
 
 ---@param isDebug boolean

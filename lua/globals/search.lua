@@ -8,11 +8,11 @@ local search = {
 
 local tables = require("globals/tables")
 
-local browseVars = {
+local browse = {
     instances = {}
 }
 
-local filterVars = {
+local filter = {
     activeFilter = {},
     instances = {},
     states = {
@@ -27,20 +27,20 @@ local stringFind, stringLower = string.find, string.lower
 ------------------
 
 local function getTable(instanceName)
-    if browseVars[instanceName] ~= nil then
-        return browseVars[instanceName].table
+    if browse[instanceName] ~= nil then
+        return browse[instanceName].table
     else
         return nil
     end
 end
 
 local function setTable(instanceName, t)
-    browseVars[instanceName].table = tables.deepcopy(tables.retrieveTable(t, 8))
+    browse[instanceName].table = tables.deepcopy(tables.retrieveTable(t, 8))
 end
 
 local function getContents(instanceName)
-    if browseVars[instanceName] ~= nil then
-        return browseVars[instanceName].contents
+    if browse[instanceName] ~= nil then
+        return browse[instanceName].contents
     else
         return nil
     end
@@ -50,9 +50,9 @@ local function setContents(instanceName, t)
     local contents = tables.retrieveTable(t, 8)
 
     if tables.getTableType(contents) == "array" then
-        browseVars[instanceName].contents = contents
+        browse[instanceName].contents = contents
     else
-        browseVars[instanceName].contents = tables.assignKeysOrder(contents)
+        browse[instanceName].contents = tables.assignKeysOrder(contents)
     end
 end
 
@@ -62,19 +62,19 @@ local function initailize(instanceName)
         table = {},
     }
 
-    browseVars[instanceName] = newInstance
+    browse[instanceName] = newInstance
 end
 
 ---@param instanceName string
 ---@return boolean
 function search.isBrowseInstance(instanceName)
-    return browseVars[instanceName] ~= nil
+    return browse[instanceName] ~= nil
 end
 
 ---@param instanceName string
 ---@param t table
 function search.setBrowseInstance(instanceName, t)
-    if browseVars[instanceName] == nil then
+    if browse[instanceName] == nil then
         initailize(instanceName)
     end
 
@@ -140,7 +140,7 @@ end
 function search.getBrowseContents(instanceName)
     local contents
 
-    if browseVars[instanceName] ~= nil then
+    if browse[instanceName] ~= nil then
         contents = getContents(instanceName)
     end
 
@@ -156,7 +156,7 @@ end
 function search.getBrowseTable(instanceName)
     local t
 
-    if browseVars[instanceName] then
+    if browse[instanceName] then
         t = getTable(instanceName)
     end
 
@@ -166,9 +166,9 @@ end
 ---@param instanceName string?
 function search.flushBrowse(instanceName)
     if instanceName then
-        browseVars[instanceName] = nil
+        browse[instanceName] = nil
     else
-        browseVars = {}
+        browse = {}
     end
 end
 
@@ -178,24 +178,24 @@ end
 
 ---@return boolean
 function search.isFiltering()
-    return filterVars.states.isFiltering
+    return filter.states.isFiltering
 end
 
 ---@param isEnabled boolean
 function search.setFiltering(isEnabled)
-    filterVars.states.isFiltering = isEnabled
+    filter.states.isFiltering = isEnabled
 end
 
 ---@return table
 function search.getActiveFilter()
-    return filterVars.activeFilter
+    return filter.activeFilter
 end
 
 ---@param instanceName string
 ---@return unknown
 function search.getFilterQuery(instanceName)
-    if filterVars.instances[instanceName] ~= nil then
-        return filterVars.instances[instanceName].query
+    if filter.instances[instanceName] ~= nil then
+        return filter.instances[instanceName].query
     else
         return ""
     end
@@ -203,8 +203,9 @@ end
 
 ---@param instanceName string
 function search.initializeFilterInstance(instanceName)
-    filterVars.instances[instanceName] = {
+    filter.instances[instanceName] = {
         label = instanceName,
+        results = {},
         query = ""
     }
 end
@@ -212,7 +213,7 @@ end
 ---@param instanceName string
 ---@return boolean
 function search.isFilterInstance(instanceName)
-    if filterVars.instances[instanceName] ~= nil then
+    if filter.instances[instanceName] ~= nil then
         return true
     else
         return false
@@ -221,7 +222,7 @@ end
 
 ---@param instanceName string
 function search.setActiveFilterInstance(instanceName)
-    filterVars.activeFilter = filterVars.instances[instanceName]
+    filter.activeFilter = filter.instances[instanceName]
 end
 
 ---@param instanceName string
@@ -282,15 +283,29 @@ local function filterTable(t, query, results)
     end
 end
 
+---@param instanceName string
 ---@param t table
 ---@param query string
 ---@return table
-function search.filter(t, query)
+function search.filter(instanceName, t, query)
     local results = {}
 
-    filterTable(t, query, results)
+    if filter.states.isFiltering then
+        filterTable(t, query, results)
 
-    return results
+        filter.instances[instanceName].results = results
+    end
+
+    return filter.instances[instanceName].results
+end
+
+---@param instanceName string?
+function search.flushFilter(instanceName)
+        if instanceName then
+            filter.instances[instanceName] = nil
+        else
+            filter.instances = {}
+        end
 end
 
 

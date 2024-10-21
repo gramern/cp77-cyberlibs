@@ -107,7 +107,8 @@ local thirdparty = {
 
         # TESTING & SUPPORT
 
-        ThisChord - RedModding Discord Server]]
+        ThisChord - RedModding Discord Server
+        ]]
 }
 
 return thirdparty.__LICENSES
