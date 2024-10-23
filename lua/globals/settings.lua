@@ -67,6 +67,24 @@ end
 -- User Settings
 ------------------
 
+---@param settingName string
+---@return any|nil
+function settings.getUserSetting(poolName, settingName)
+    return userSettings[poolName] and userSettings[poolName][settingName] or nil
+end
+
+---@param settingName string
+---@param value any
+function settings.setUserSetting(poolName, settingName, value)
+    if  userSettings[poolName] == nil then
+        userSettings[poolName] = {}
+    end
+
+    userSettings[poolName][settingName] = value
+
+    saveRequest()
+end
+
 ---@param poolName string
 ---@param contents table
 function settings.writeUserSettings(poolName, contents)

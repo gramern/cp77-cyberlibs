@@ -1,12 +1,5 @@
 local app = ...
 
-local gameModules = {
-    __NAME = "Game Modules",
-    __ICON = IconGlyphs.Bookshelf,
-    __VERSION = { 0, 2, 0},
-    __TITLE = ""
-}
-
 local ImGuiExt = require("globals/ImGuiExt")
 local logger = require("globals/logger")
 local search = require("globals/search")
@@ -26,8 +19,16 @@ local modules = {
     selected = {}
 }
 
-local widgetState = {}
-
+local widgetState = {
+    __global = {
+        exportTableItemsPerPage = function()
+            return settings.getUserSetting('gameModules', 'exportTableItemsPerPage') or 500
+        end,
+        importNodesCharThreshold = function()
+            return settings.getUserSetting('gameModules', 'importNodesCharThreshold') or 2
+        end,
+    }
+}
 local function isNativeModule(filePath, nativeSet)
     for nativePath in pairs(nativeSet) do
         if filePath:sub(-#nativePath) == nativePath then
@@ -198,9 +199,7 @@ local function drawViewerRow(label, value, rowWidth, labelWidth)
     ImGui.SetCursorPosX(labelWidth)
     ImGui.SetNextItemWidth(rowWidth - labelWidth)
 
-    if value == nil then
-        value = "-"
-    end
+    value = value or "-"
     
     ImGui.InputText('##' .. label, tostring(value), 256)
 
@@ -213,7 +212,9 @@ local function drawViewerRow(label, value, rowWidth, labelWidth)
 end
 
 local function drawTableCellTooltip(text)
+    ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor('text'))
     ImGuiExt.SetTooltip(text)
+    ImGui.PopStyleColor()
 end
 
 local function drawPopupContextExportTable(exportLabel, popupLabel, copyValue, copyValueLabel)
@@ -225,16 +226,41 @@ local function drawPopupContextExportTable(exportLabel, popupLabel, copyValue, c
 
     if ImGui.BeginPopupContextWindow(popupLabel, ImGuiPopupFlags.MouseButtonRight) then
         ImGuiExt.MenuItemCopyValue(copyValue, copyValueLabel)
-
         ImGui.Separator()
 
-        if ImGui.MenuItem(IconGlyphs.ArrowUp .. " " .. "Jump To Start") then
+        local pages = widgetState[exportLabel].pages
+
+        ImGui.BeginDisabled(pages.currentPage <= 0)
+
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Previous Page", IconGlyphs.ArrowLeft)) then
+            if pages.currentPage > 0 then
+                pages.currentPage = pages.currentPage - 1
+            end
+    
+            print(pages.currentPage)
+        end
+
+        ImGui.EndDisabled()
+        ImGui.BeginDisabled(pages.currentPage >= pages.count - 1)
+
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Next Page", IconGlyphs.ArrowRight)) then
+            if pages.currentPage < pages.count - 1 then
+                pages.currentPage = pages.currentPage + 1
+            end
+    
+            print(pages.currentPage)
+        end
+
+        ImGui.EndDisabled()
+        ImGui.Separator()
+
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Jump To Start", IconGlyphs.ArrowUp)) then
             widgetState[exportLabel].jumpToHeader = true
         end
 
         ImGui.Separator()
 
-        if ImGui.MenuItem(IconGlyphs.ArrowCollapseUp .. " " .. "Collapse Export") then
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Collapse Export", IconGlyphs.ArrowCollapseUp)) then
             widgetState[exportLabel].open = false
         end
 
@@ -242,7 +268,35 @@ local function drawPopupContextExportTable(exportLabel, popupLabel, copyValue, c
     end
 end
 
-local function drawExportTable(exportLabel, export, itemWidth)
+local function drawPaginationButtonsExportTable(exportLabel, buttonWidth, occurenceNumber)
+    local pages = widgetState[exportLabel].pages
+    occurenceNumber = occurenceNumber - 1
+    local dummySpaces = string.rep(" ", occurenceNumber)
+
+    ImGui.BeginGroup()
+    ImGui.BeginDisabled(pages.currentPage <= 0)
+
+    if ImGui.Button(dummySpaces .. IconGlyphs.ArrowLeft .. " " .. "Previous Page" .. dummySpaces, buttonWidth, 0) then
+        if pages.currentPage > 0 then
+            pages.currentPage = pages.currentPage - 1
+        end
+    end
+
+    ImGui.EndDisabled()
+    ImGui.SameLine()
+    ImGui.BeginDisabled(pages.currentPage >= pages.count - 1)
+
+    if ImGui.Button(dummySpaces .. IconGlyphs.ArrowRight .. " " .. "Next Page" .. dummySpaces, buttonWidth, 0) then
+        if pages.currentPage < pages.count - 1 then
+            pages.currentPage = pages.currentPage + 1
+        end
+    end
+
+    ImGui.EndDisabled()
+    ImGui.EndGroup()
+end
+
+local function drawExportTable(exportLabel, export, startPos, itemWidth)
     local entryColumnWidth = itemWidth / 2.5
     local detailColumnWidth = entryColumnWidth / 3
 
@@ -263,21 +317,26 @@ local function drawExportTable(exportLabel, export, itemWidth)
     ImGuiExt.TextAlt("Forwarder")
     ImGui.NextColumn()
 
-    for i, entry in ipairs(export) do
+    for _, entry in ipairs(export) do
         local entryName = tostring(entry.entry)
         local ordinal = tostring(entry.ordinal)
         local rva = tostring(entry.rva)
         local forwarder = tostring(entry.forwarderName)
-        local summary = entryName .. ", Ordinal:" .. ordinal .. ", RVA: " .. rva .. ", Forwarder: " .. forwarder
+        local summary = entryName .. ", Ordinal: " .. ordinal .. ", RVA: " .. rva .. ", Forwarder: " .. forwarder
 
         ImGui.Separator()
-        ImGuiExt.TextAltScale(tostring(i), 0.85, true)
+        ImGuiExt.TextAltScale(tostring(startPos), 0.85, true)
+        local itemSpacingY = ImGui.GetStyle().ItemSpacing.y
+        local textHeight = ImGui.GetTextLineHeight()
+        local cellHeight = textHeight + itemSpacingY
+
+        startPos = startPos + 1
 
         local summaryPos = ImVec2.new()
         summaryPos.x, summaryPos.y = ImGui.GetCursorScreenPos()
-        summaryPos.y = summaryPos.y - ImGui.GetTextLineHeight() - (3 * ImGuiExt.GetResolutionFactor())
+        summaryPos.y = summaryPos.y - cellHeight
         local summarySize  = ImVec2.new(summaryPos.x + ImGui.GetColumnWidth(),
-                                        summaryPos.y + ImGui.GetTextLineHeight() + 10)
+                                        summaryPos.y + cellHeight)
 
         if ImGuiExt.IsMouseHoverOverRegion(summaryPos, summarySize) then
             widgetState[exportLabel].hovered = summary
@@ -295,9 +354,9 @@ local function drawExportTable(exportLabel, export, itemWidth)
         if entryName then
             local entryPos = ImVec2.new()
             entryPos.x, entryPos.y = ImGui.GetCursorScreenPos()
-            entryPos.y = entryPos.y - ImGui.GetTextLineHeight() - (3 * ImGuiExt.GetResolutionFactor())
+            entryPos.y = entryPos.y - cellHeight
             local entrySize  = ImVec2.new(entryPos.x + ImGui.GetColumnWidth(),
-                                            entryPos.y + ImGui.GetTextLineHeight() + 10)
+                                            entryPos.y + cellHeight)
 
             if ImGuiExt.IsMouseHoverOverRegion(entryPos, entrySize) then
                 widgetState[exportLabel].hovered = entryName
@@ -316,9 +375,9 @@ local function drawExportTable(exportLabel, export, itemWidth)
         if ordinal then
             local ordinalPos = ImVec2.new()
             ordinalPos.x, ordinalPos.y = ImGui.GetCursorScreenPos()
-            ordinalPos.y = ordinalPos.y - ImGui.GetTextLineHeight() - (3 * ImGuiExt.GetResolutionFactor())
+            ordinalPos.y = ordinalPos.y - cellHeight
             local ordinalSize  = ImVec2.new(ordinalPos.x + ImGui.GetColumnWidth(),
-                                            ordinalPos.y + ImGui.GetTextLineHeight() + 10)
+                                            ordinalPos.y + cellHeight)
 
             if ImGuiExt.IsMouseHoverOverRegion(ordinalPos, ordinalSize) then
                 widgetState[exportLabel].hovered = ordinal
@@ -337,9 +396,9 @@ local function drawExportTable(exportLabel, export, itemWidth)
         if rva then
             local rvaPos = ImVec2.new()
             rvaPos.x, rvaPos.y = ImGui.GetCursorScreenPos()
-            rvaPos.y = rvaPos.y - ImGui.GetTextLineHeight() - (3 * ImGuiExt.GetResolutionFactor())
+            rvaPos.y = rvaPos.y - cellHeight
             local rvaSize  = ImVec2.new(rvaPos.x + ImGui.GetColumnWidth(),
-                                        rvaPos.y + ImGui.GetTextLineHeight() + 10)
+                                        rvaPos.y + cellHeight)
 
             if ImGuiExt.IsMouseHoverOverRegion(rvaPos, rvaSize) then
                 widgetState[exportLabel].hovered = rva
@@ -358,9 +417,9 @@ local function drawExportTable(exportLabel, export, itemWidth)
         if forwarder then
             local forwarderPos = ImVec2.new()
             forwarderPos.x, forwarderPos.y = ImGui.GetCursorScreenPos()
-            forwarderPos.y = forwarderPos.y - ImGui.GetTextLineHeight() - (3 * ImGuiExt.GetResolutionFactor())
+            forwarderPos.y = forwarderPos.y - cellHeight
             local forwarderSize  = ImVec2.new(forwarderPos.x + ImGui.GetColumnWidth(),
-                                                forwarderPos.y + ImGui.GetTextLineHeight() + 10)
+                                                forwarderPos.y + cellHeight)
 
             if ImGuiExt.IsMouseHoverOverRegion(forwarderPos, forwarderSize) then
                 widgetState[exportLabel].hovered = forwarder
@@ -377,6 +436,19 @@ local function drawExportTable(exportLabel, export, itemWidth)
     end
 
     ImGui.Columns(1)
+
+    local dummyPos = ImVec2.new()
+    dummyPos.x, dummyPos.y = ImGui.GetCursorScreenPos()
+    local dummySize  = ImVec2.new(dummyPos.x + itemWidth,
+                                        dummyPos.y + 10)
+
+    if ImGuiExt.IsMouseHoverOverRegion(dummyPos, dummySize) then
+        widgetState[exportLabel].hovered = ""
+
+        if ImGui.IsMouseClicked(ImGuiMouseButton.Right) then
+            widgetState[exportLabel].clicked = ""
+        end
+    end
 
     if not widgetState[exportLabel].isContextPopup then
         ImGuiExt.SetStatusBar(widgetState[exportLabel].hovered)
@@ -395,27 +467,27 @@ local function drawPopupContextImportTreeNode(importLabel, popupLabel, copyValue
 
         ImGui.Separator()
 
-        if ImGui.MenuItem(IconGlyphs.ArrowTopLeft .. " " .. "Jump To Selection") then
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Jump To Selection", IconGlyphs.ArrowTopLeft)) then
             widgetState[importLabel].commands.jumpToSelected = true
         end
 
-        if ImGui.MenuItem(IconGlyphs.ArrowUp .. " " .. "Jump To Start") then
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Jump To Start", IconGlyphs.ArrowUp)) then
             widgetState[importLabel].commands.jumpToHeader = true
         end
 
         ImGui.Separator()
 
-        if ImGui.MenuItem(IconGlyphs.MinusBoxMultipleOutline .. " " .. "Collapse Others") then
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Collapse Others", IconGlyphs.MinusBoxMultipleOutline)) then
             widgetState[importLabel].commands.collapseOther = true
         end
 
-        if ImGui.MenuItem(IconGlyphs.CollapseAllOutline .. " " .. "Collapse All") then
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Collapse All", IconGlyphs.CollapseAllOutline)) then
             widgetState[importLabel].commands.collapseAll = true
         end
 
         ImGui.Separator()
 
-        if ImGui.MenuItem(IconGlyphs.ArrowCollapseUp .. " " .. "Collapse Import") then
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Collapse Import", IconGlyphs.ArrowCollapseUp)) then
             widgetState[importLabel].open = false
         end
 
@@ -568,14 +640,24 @@ local function handleFiltering(searchInstanceName, export, import, exportLabel, 
                 search.setFiltering(true)
                 utils.SetDelay(1, "RootWindow.SearchInput", search.setFiltering, false)
                 setFiltering(importLabel, true)
+                local openNodesCharThershold = widgetState.__global.importNodesCharThreshold()
 
-                widgetState[importLabel].commands.openAll = true
+                if #search.getFilterQuery(searchInstanceName) > openNodesCharThershold then
+                    widgetState[importLabel].commands.openAll = true
+                else
+                    widgetState[importLabel].commands.collapseAll = true
+                end
             end
 
             if ImGuiExt.IsSearchInputTyped(activeFilter.label) then
                 search.setFiltering(true)
+                local openNodesCharThershold = widgetState.__global.importNodesCharThreshold()
 
-                widgetState[importLabel].commands.openAll = true
+                if #search.getFilterQuery(searchInstanceName) > openNodesCharThershold then
+                    widgetState[importLabel].commands.openAll = true
+                else
+                    widgetState[importLabel].commands.collapseAll = true
+                end
             end
 
             widgetState[importLabel].pool = search.filter(searchInstanceName, import, search.getFilterQuery(searchInstanceName))
@@ -651,6 +733,12 @@ local function drawModuleTab(onScreenName, fileName, filePath)
             jumpToHeader = false,
             notCollapsed = false,
             open = false,
+            pages = {
+                allItems = 0,
+                count = 1,
+                currentPage = 0,
+                startPos = 1,
+            },
             pool = {}
         }
 
@@ -698,10 +786,26 @@ local function drawModuleTab(onScreenName, fileName, filePath)
     if widgetState[exportLabel].notCollapsed then
         widgetState[importLabel].open = false
         local export = widgetState[exportLabel].pool
+        local pages = widgetState[exportLabel].pages
 
         if next(export) then
+            local itemsPerPage = widgetState.__global.exportTableItemsPerPage()
+            pages.allItems = #export
+            pages.count = math.floor((pages.allItems / itemsPerPage) + 0.5)
+            pages.startPos = pages.currentPage * itemsPerPage + 1
+            local exportShowed = {}
+            local itemsExtracted = math.min(itemsPerPage, pages.allItems - pages.startPos + 1)
+            
+            for i = 1, itemsExtracted do
+                exportShowed[i] = export[pages.startPos + i - 1]
+            end
+
+            if pages.count > 1 then
+                drawPaginationButtonsExportTable(exportLabel, buttonWidth, 1)
+            end
+
             ImGui.BeginGroup()
-            drawExportTable(exportLabel, export, itemWidth)
+            drawExportTable(exportLabel, exportShowed, pages.startPos, itemWidth)
             ImGui.EndGroup()
             drawPopupContextExportTable(exportLabel,
                                         widgetState[exportLabel].clicked,
@@ -709,15 +813,22 @@ local function drawModuleTab(onScreenName, fileName, filePath)
                                         "Value")
             ImGui.Spacing()
 
-            if ImGui.Button(IconGlyphs.ArrowUp .. " " .. "Jump To Start", buttonWidth, 0) then
+            if pages.count > 1 then
+                drawPaginationButtonsExportTable(exportLabel, buttonWidth, 2)
+                ImGui.Spacing()
+            end
+
+            if ImGui.Button(ImGuiExt.TextIcon("Jump To Start", IconGlyphs.ArrowUp), buttonWidth, 0) then
                 widgetState[exportLabel].jumpToHeader = true
             end
 
             ImGui.SameLine()
 
-            if ImGui.Button(IconGlyphs.ArrowCollapseUp .. " " .. "Collapse Export", buttonWidth, 0) then
+            if ImGui.Button(ImGuiExt.TextIcon("Collapse Export", IconGlyphs.ArrowCollapseUp), buttonWidth, 0) then
                 widgetState[exportLabel].open = false
             end
+
+            ImGui.Spacing()
         else
             ImGui.BeginGroup()
             ImGui.Spacing()
@@ -760,13 +871,13 @@ local function drawModuleTab(onScreenName, fileName, filePath)
                 drawImportTreeNode(v, tostring(k), importLabel)
             end
 
-            if ImGui.Button(IconGlyphs.ArrowUp .. " " .. "Jump To Start", buttonWidth, 0) then
+            if ImGui.Button(ImGuiExt.TextIcon("Jump To Start", IconGlyphs.ArrowUp), buttonWidth, 0) then
                 widgetState[importLabel].commands.jumpToHeader = true
             end
 
             ImGui.SameLine()
 
-            if ImGui.Button(IconGlyphs.ArrowCollapseUp .. " " .. "Collapse Import", buttonWidth, 0) then
+            if ImGui.Button(ImGuiExt.TextIcon("Collapse Import", IconGlyphs.ArrowCollapseUp), buttonWidth, 0) then
                 widgetState[importLabel].open = false
             end
 
@@ -806,23 +917,23 @@ local function drawSelectedModuleContextMenu(onScreenName, fileName, filePath)
     ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor('text'))
 
     if ImGui.BeginPopup("GameModules.SelectedModule.PopupMenu") then
-        if ImGui.MenuItem(IconGlyphs.OpenInNew .. " " .. "Show in new tab") then
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Show in new tab", IconGlyphs.OpenInNew)) then
             addModuleTab(onScreenName, fileName, filePath)
         end
 
         ImGui.Separator()
 
-        if ImGui.MenuItem(IconGlyphs.ContentCopy .. " " .. "Copy File Name") then
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Copy File Name", IconGlyphs.ContentCopy)) then
             ImGui.SetClipboardText(fileName)
         end
 
-        if ImGui.MenuItem(IconGlyphs.ContentCopy .. " " .. "Copy File Path") then
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Copy File Path", IconGlyphs.ContentCopy)) then
             ImGui.SetClipboardText(filePath)
         end
 
         ImGui.Separator()
 
-        if ImGui.MenuItem(IconGlyphs.Refresh .. " " .. "Refresh List") then
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Refresh List", IconGlyphs.Refresh)) then
             refreshLoadedModules()
 
             ImGuiExt.SetStatusBar("Refreshed the list.")
@@ -851,11 +962,12 @@ local function handleSelectedModule(regionPos, regionSize, onScreenName, fileNam
     drawSelectedModuleContextMenu(onScreenName, fileName, filePath)
 end
 
-function gameModules.draw()
+local function draw()
     local resolutionFactor = ImGuiExt.GetResolutionFactor()
     local scaleFactor = ImGuiExt.GetScaleFactor()
     local windowWidth = ImGui.GetWindowWidth()
     local windowPaddingX = ImGui.GetStyle().WindowPadding.x
+    local framePaddingX = ImGui.GetStyle().FramePadding.x
     local itemWidth = windowWidth - 2 * windowPaddingX
     local regionPos = {}
 
@@ -876,9 +988,9 @@ function gameModules.draw()
     ImGui.Columns(2, "##GameModules.LoadedModules.ListHeader")
     ImGui.SetColumnWidth(0, headerColumnWidth)
     ImGui.Separator()
-    ImGuiExt.TextAlt("Module")
+    ImGuiExt.TextTitle("Module", 1, true)
     ImGui.NextColumn()
-    ImGuiExt.TextAlt("Category")
+    ImGuiExt.TextTitle("Category", 1, true)
     ImGui.NextColumn()
     ImGui.Separator()
     ImGui.Columns(1)
@@ -919,7 +1031,7 @@ function gameModules.draw()
     ImGui.EndChildFrame()
     ImGui.Separator()
     ImGui.Spacing()
-    ImGui.Indent(6)
+    ImGui.Indent(framePaddingX)
 
     if next(modules.count) then
         ImGuiExt.TextAlt(modules.count.all .. " modules, system: " .. modules.count["system"] ..
@@ -944,11 +1056,64 @@ function gameModules.draw()
     drawViewerRow("Entry Point", previewed["Entry Point"], previewRegionAvail, labelWidth)
     drawViewerRow("Load Address", previewed["Load Address"], previewRegionAvail, labelWidth)
     drawViewerRow("Mapped Size", previewed["Mapped Size"], previewRegionAvail, labelWidth)
-    ImGui.Indent(-6)
+    ImGui.Indent(-framePaddingX)
     ImGui.Spacing()
+end
 
-    if next(modules.loaded) ~= nil then return end
+local function drawSettings()
+    local itemsPerPage, itemsPerPageToggle
+    local charThreshold, charThresholdToggle
+    
+    ImGui.SetNextItemWidth(200 * ImGuiExt.GetScaleFactor())
+
+    itemsPerPage, itemsPerPageToggle = ImGui.SliderFloat("##itemsPerPage", widgetState.__global.exportTableItemsPerPage(), 100, 2000, "%.0f")
+
+    ImGui.SameLine()
+    ImGuiExt.TextAlt("Module export table entries per page")
+    
+    if itemsPerPageToggle then
+        settings.setUserSetting('gameModules', 'exportTableItemsPerPage', itemsPerPage)
+    end
+
+    ImGui.SetNextItemWidth(200 * ImGuiExt.GetScaleFactor())
+
+    charThreshold, charThresholdToggle = ImGui.SliderFloat("##charThreshold", widgetState.__global.importNodesCharThreshold(), 0, 10, "%.0f")
+    
+    ImGui.SameLine()
+    ImGuiExt.TextAlt("Search query characters number to open import nodes")
+
+    if charThresholdToggle then
+        settings.setUserSetting('gameModules', 'importNodesCharThreshold', charThreshold)
+    end
+
+    ImGuiExt.TextAlt("Higher values above might cause noticeable performance hit when viewing a module.")
+end
+
+local events = {}
+
+function events.onInit()
     refreshLoadedModules()
 end
 
-return gameModules
+-- local function inputKeyPressPrint()
+--     print("KeyPress test print")
+-- end
+
+-- local function inputKeyReleasePrint()
+--     print("KeyRelease test print")
+-- end
+
+return {
+    __NAME = "Game Modules",
+    __ICON = IconGlyphs.Bookshelf,
+    __VERSION = { 0, 2, 0},
+    __TITLE = "",
+    draw = draw,
+    drawSettings = drawSettings,
+    events = events,
+    -- inputs = {
+    --     { id = "keypressTest", description = "Key Press & Release Test", keyPressCallback = inputKeyPressPrint, keyReleaseCallback = inputKeyReleasePrint },
+    --     { id = "hotkeyPressTest", description = "HotKey on Press Test", keyPressCallback = inputKeyPressPrint },
+    --     { id = "hotkeyReleaseTest", description = "HotKey on Release Test", keyReleaseCallback = inputKeyReleasePrint }
+    -- }
+}

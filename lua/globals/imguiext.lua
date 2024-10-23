@@ -14,12 +14,13 @@ local fallbackTheme = {
     text = { 0, 0, 0, 1 },
     textAlt = { 1, 1, 1, 1 },
     textTitle = { 1, 1, 1, 1 },
+    textTitleBg = { 0.25, 0.25, 0.25, 0.75 },
     base = { 0.5, 0.5, 0.5, 1 },
     border = { 0.5, 0.5, 0.5, 1 },
     bg = { 0, 0, 0, 0.75 },
     dim = { 0.25, 0.25, 0.25, 1 },
     pop = { 0.75, 0.75, 0.75, 1 },
-    scrollbar = { base = { 0.5, 0.5, 0.5, 1 }, dim = { 0.25, 0.25, 0.25, 1 }, pop = { 0.75, 0.75, 0.75, 1 }},
+    scrollbar = { base = { 0.5, 0.5, 0.5, 1 }, dim = { 0.25, 0.25, 0.25, 1 }, pop = { 0.75, 0.75, 0.75, 1 }, rounding = 5, size = 20 },
     separator = { 0.5, 0.5, 0.5, 1 },
     child = { border = 0, rounding = 5 },
     frame = { border = 0, rounding = 5 },
@@ -39,7 +40,7 @@ local tabBars = {}
 local var = {
     notification = { active = false, text = "", textWidth = 0 },
     scaleFactor = 1.5,
-    screen = { aspectRatio = 1.78, width = 3840, height = 2160 },
+    screen = { aspectRatio = 1.78, width = 3840, height = 2160 }
 }
 
 local settings = require("globals/settings")
@@ -111,6 +112,8 @@ function ImGuiExt.PushStyle()
     ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, 10, 5)
     ImGui.PushStyleVar(ImGuiStyleVar.PopupBorderSize, popup.border)
     ImGui.PushStyleVar(ImGuiStyleVar.PopupRounding, popup.rounding)
+    ImGui.PushStyleVar(ImGuiStyleVar.ScrollbarRounding, scrollbar.rounding)
+    ImGui.PushStyleVar(ImGuiStyleVar.ScrollbarSize, scrollbar.size)
     ImGui.PushStyleVar(ImGuiStyleVar.TabBorderSize, tab.border)
     ImGui.PushStyleVar(ImGuiStyleVar.TabBarBorderSize, tab.border)
     ImGui.PushStyleVar(ImGuiStyleVar.TabRounding, tab.rounding)
@@ -130,17 +133,17 @@ function ImGuiExt.PushStyle()
     ImGui.PushStyleColor(ImGuiCol.HeaderHovered, pop[1], pop[2], pop[3], pop[4])
     ImGui.PushStyleColor(ImGuiCol.HeaderActive, base[1], base[2], base[3], base[4])
     ImGui.PushStyleColor(ImGuiCol.PopupBg, dim[1], dim[2], dim[3], dim[4])
-    ImGui.PushStyleColor(ImGuiCol.ResizeGrip, dim[1], dim[2], dim[3], dim[4])
+    ImGui.PushStyleColor(ImGuiCol.ResizeGrip, base[1], base[2], base[3], base[4])
     ImGui.PushStyleColor(ImGuiCol.ResizeGripHovered, pop[1], pop[2], pop[3], pop[4])
     ImGui.PushStyleColor(ImGuiCol.ResizeGripActive, dim[1], dim[2], dim[3], dim[4])
-    ImGui.PushStyleColor(ImGuiCol.ScrollbarGrab, scrollbar.dim[1], scrollbar.dim[2], scrollbar.dim[3], scrollbar.dim[4])
-    ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabHovered, scrollbar.base[1], scrollbar.base[2], scrollbar.base[3], scrollbar.base[4])
-    ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabActive, scrollbar.pop[1], scrollbar.pop[2], scrollbar.pop[3], scrollbar.pop[4])
+    ImGui.PushStyleColor(ImGuiCol.ScrollbarGrab, scrollbar.base[1], scrollbar.base[2], scrollbar.base[3], scrollbar.base[4])
+    ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabHovered, scrollbar.pop[1], scrollbar.pop[2], scrollbar.pop[3], scrollbar.pop[4])
+    ImGui.PushStyleColor(ImGuiCol.ScrollbarGrabActive, scrollbar.dim[1], scrollbar.dim[2], scrollbar.dim[3], scrollbar.dim[4])
     ImGui.PushStyleColor(ImGuiCol.SeparatorActive, pop[1], pop[2], pop[3], pop[4])
     ImGui.PushStyleColor(ImGuiCol.Separator, activeTheme.separator[1], activeTheme.separator[2], activeTheme.separator[3], activeTheme.separator[4])
     ImGui.PushStyleColor(ImGuiCol.SeparatorHovered, base[1], base[2], base[3], base[4])
-    ImGui.PushStyleColor(ImGuiCol.SliderGrab, base[1], base[2], base[3], base[4])
-    ImGui.PushStyleColor(ImGuiCol.SliderGrabActive, pop[1], pop[2], pop[3], pop[4])
+    ImGui.PushStyleColor(ImGuiCol.SliderGrab, scrollbar.base[1], scrollbar.base[2], scrollbar.base[3], scrollbar.base[4])
+    ImGui.PushStyleColor(ImGuiCol.SliderGrabActive, scrollbar.pop[1], scrollbar.pop[2], scrollbar.pop[3], scrollbar.pop[4])
     ImGui.PushStyleColor(ImGuiCol.Tab, dim[1], dim[2], dim[3], dim[4])
     ImGui.PushStyleColor(ImGuiCol.TabHovered, pop[1], pop[2], pop[3], pop[4])
     ImGui.PushStyleColor(ImGuiCol.TabActive, tab.base[1], tab.base[2], tab.base[3], tab.base[4])
@@ -241,7 +244,7 @@ function ImGuiExt.SetTooltip(text)
         ImGui.BeginTooltip()
         ImGui.PushTextWrapPos(ImGui.GetFontSize() * 30)
         ImGui.TextWrapped(text)
-        ImGui.PushTextWrapPos()
+        ImGui.PopTextWrapPos()
         ImGui.EndTooltip()
     end
 end
@@ -257,18 +260,20 @@ function ImGuiExt.MenuItemCopyValue(value, valueLabel)
 
     if value and value ~= "" and value ~= "-" and value ~= "Unknown" and value ~= 0 then
         if valueLabel then
-            command = IconGlyphs.ContentCopy .. " " .. "Copy " .. valueLabel
+            command = ImGuiExt.TextIcon("Copy " .. valueLabel, IconGlyphs.ContentCopy)
         else
-            command = IconGlyphs.ContentCopy .. " " .. "Copy"
+            command = ImGuiExt.TextIcon("Copy", IconGlyphs.ContentCopy)
         end
 
         if ImGui.MenuItem(command) then
             ImGui.SetClipboardText(tostring(value))
         end
     else
-        command = IconGlyphs.CheckboxBlankOffOutline .. " " .. "Nothing To Copy"
+        command = ImGuiExt.TextIcon("Nothing To Copy", IconGlyphs.CheckboxBlankOffOutline)
 
+        ImGui.BeginDisabled()
         ImGui.MenuItem(command)
+        ImGui.EndDisabled()
     end
 end
 
@@ -349,15 +354,41 @@ function ImGuiExt.TextAltScale(text, fontScale, wrap)
 end
 
 ---@param text string
----@param charCount number
 ---@param fontScale number
-function ImGuiExt.TextTitle(text, charCount, fontScale)
-    ImGui.PushStyleColor(ImGuiCol.Text, activeTheme.textTitle[1], activeTheme.textTitle[2], activeTheme.textTitle[3], activeTheme.textTitle[4])
-
+---@param drawBackground boolean?
+---@param charCount number?
+function ImGuiExt.TextTitle(text, fontScale, drawBackground, charCount)
     ImGui.SetWindowFontScale(fontScale)
-    ImGui.TextWrapped(utils.trimString(text, charCount))
-    ImGui.SetWindowFontScale(1.0)
+    charCount = charCount or 70
+
+    if drawBackground then
+        local curPosX, curPosY = ImGui.GetCursorScreenPos()
+        local contentRegionAvailX = ImGui.GetContentRegionAvail()
+        local textWidth, textHeight = ImGui.CalcTextSize(text)
+        local itemSpacingX = ImGui.GetStyle().ItemSpacing.x
+        local itemSpacingY = ImGui.GetStyle().ItemSpacing.y
+        ImGui.ImDrawListAddRectFilled(ImGui.GetWindowDrawList(),
+                                        curPosX - itemSpacingX,
+                                        curPosY - (itemSpacingY / 2),
+                                        curPosX + contentRegionAvailX + itemSpacingX,
+                                        curPosY + textHeight + itemSpacingY,
+                                        ImGui.ColorConvertFloat4ToU32(activeTheme.textTitleBg))
+    end
+
+    ImGui.PushStyleColor(ImGuiCol.Text, activeTheme.textTitle[1], activeTheme.textTitle[2], activeTheme.textTitle[3], activeTheme.textTitle[4])
+    ImGui.Text(utils.trimString(text, charCount))
     ImGui.PopStyleColor()
+    ImGui.SetWindowFontScale(1.0)
+end
+
+---@param text string
+---@param iconGlyph any?
+function ImGuiExt.TextIcon(text, iconGlyph)
+    if iconGlyph then
+        return iconGlyph .. " " .. text
+    else
+        return "      " .. text
+    end
 end
 
 ------------------
@@ -403,7 +434,7 @@ end
 ---@param hint string
 local function intializeSearchInput(label, hint)
     searchInputs[label] = {
-        hint = IconGlyphs.Magnify .. " " .. hint,
+        hint = ImGuiExt.TextIcon(hint, IconGlyphs.Magnify),
         isActive = nil,
         isTyped = nil,
         newLabel = "##" .. label,
@@ -427,7 +458,7 @@ function ImGuiExt.SearchInput(label, query, hint, itemWidth, horizontalScaling)
     if query ~= "" then
         searchInputs[label].hint = query
     else
-        searchInputs[label].hint = IconGlyphs.Magnify .. " " .. hint
+        searchInputs[label].hint = ImGuiExt.TextIcon(hint, IconGlyphs.Magnify)
     end
 
     local scaling = horizontalScaling and var.scaleFactor or 1
@@ -631,7 +662,7 @@ function ImGuiExt.TabBar(tabBarLabel, flags)
 
                     if tab.isActive then
                         if tab.title ~= "" then
-                            ImGuiExt.TextTitle(tab.title, 75, 1.2)
+                            ImGuiExt.TextTitle(tab.title, 1.2, false, 75)
                         else
                             ImGui.Spacing()
                         end
@@ -727,7 +758,7 @@ local function getClosedTabsList(tabBarLabel, closedTabsTable)
                                                             closedTabsTable[i].label,
                                                             closedTabsTable[i].title,
                                                             closedTabsTable[i].callback,
-                                                            closedTabsTable[i].callbackParams)                                                      
+                                                            closedTabsTable[i].callbackParams)
                                                         end
             }
             j = j + 1
@@ -745,18 +776,42 @@ function ImGuiExt.GetRecentlyClosedTabs(tabBarLabel)
     return tabBars[tabBarLabel].recentlyClosedTabs
 end
 
+---@param menuLabel string
+---@param tabBarLabel string
 function ImGuiExt.BeginMenuRecentlyClosedTabs(menuLabel, tabBarLabel)
     if ImGui.BeginMenu(menuLabel) then
         local closedTabsList = getClosedTabsList(tabBarLabel, ImGuiExt.GetRecentlyClosedTabs(tabBarLabel))
 
-        if next(closedTabsList)then
+        if next(closedTabsList) then
             for _, entry in ipairs(closedTabsList) do
                 if ImGui.MenuItem(entry.label) then
                     entry.command()
                 end
             end
         else
+            ImGui.BeginDisabled()
             ImGui.MenuItem("---")
+            ImGui.EndDisabled()
+        end
+
+        ImGui.EndMenu()
+    end
+end
+
+function ImGuiExt.BeginMenuOpenedTabs(menuLabel, tabBarLabel)
+    if ImGui.BeginMenu(menuLabel) then
+        local openedTabsList = tabBars[tabBarLabel].tabs
+
+        if next(openedTabsList) then
+            for _, entry in pairs(openedTabsList) do
+                if ImGui.MenuItem(entry.label) then
+                    ImGuiExt.SetActiveTab(tabBarLabel, entry.label)
+                end
+            end
+        else
+            ImGui.BeginDisabled()
+            ImGui.MenuItem("---")
+            ImGui.EndDisabled()
         end
 
         ImGui.EndMenu()

@@ -10,7 +10,7 @@ local delays = {}
 
 local logger = require("globals/logger")
 
-local mathMax = math.max
+local mathFloor, mathMax = math.max, math.floor
 local stringFind, stringRep, stringSub = string.find, string.rep, string.sub
 local tableConcat, tableInsert = table.concat, table.insert
 
@@ -90,6 +90,7 @@ function utils.normalizePath(path)
     path = path:lower()
     path = path:gsub("^%a:", "")
     path = path:gsub("^/", "")
+    
     return path
 end
 

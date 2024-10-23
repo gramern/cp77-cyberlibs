@@ -102,10 +102,10 @@ local thirdparty = {
 
         # TOOLS USED
 
-        Fellow ImGui by Rayshader (Louis Pourier) (https://fellowimgui.dev), 
-        Red CLI by Rayshader (Louis Pourier) (https://github.com/rayshader/cp2077-red-cli)
+        GUI Prototypes: Fellow ImGui by Rayshader (Louis Pourier) (https://fellowimgui.dev),
+        Bundling: Red CLI by Rayshader (Louis Pourier) (https://github.com/rayshader/cp2077-red-cli)
 
-        # TESTING & SUPPORT
+        # TESTING
 
         ThisChord - RedModding Discord Server
         ]]
