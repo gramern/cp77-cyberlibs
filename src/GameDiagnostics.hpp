@@ -17,9 +17,9 @@ class GameDiagnostics : Red::IScriptable
 public:
     static Red::CString GetGamePath();
     static Red::CString GetTimestamp(Red::Optional<bool> pathFirendly);
-    static bool CreateDiagnosticsDir(const Red::CString& relativePath);
-    static bool IsGameFile(const Red::CString& relativeFilePath);
-    static bool IsGameDir(const Red::CString& relativePath);
+    static bool CreateDiagnosticsSubDir(const Red::CString& relativePath);
+    static bool IsFile(const Red::CString& relativeFilePath);
+    static bool IsDirectory(const Red::CString& relativePath);
     static bool WriteToOutput(const Red::CString& relativeFilePath, const Red::CString& content,
                             Red::Optional<bool> append);
 
@@ -36,10 +36,10 @@ private:
 RTTI_DEFINE_CLASS(CyberlibsCore::GameDiagnostics, {
     RTTI_ALIAS("CyberlibsCore.GameDiagnostics");
 
-    RTTI_METHOD(CreateDiagnosticsDir);
+    RTTI_METHOD(CreateDiagnosticsSubDir);
     RTTI_METHOD(GetGamePath);
     RTTI_METHOD(GetTimestamp);
-    RTTI_METHOD(IsGameFile);
-    RTTI_METHOD(IsGameDir);
+    RTTI_METHOD(IsFile);
+    RTTI_METHOD(IsDirectory);
     RTTI_METHOD(WriteToOutput);
 });

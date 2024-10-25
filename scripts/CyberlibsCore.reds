@@ -19,11 +19,11 @@ public native class Cyberlibs {
 }
 
 public native class GameDiagnostics {
-  public static native func CreateDiagnosticsDir(relativePath: String) -> Bool;
+  public static native func CreateDiagnosticsSubDir(relativePath: String) -> Bool;
   public static native func GetGamePath() -> String;
   public static native func GetTimestamp(opt pathFriendly: Bool) -> String;
-  public static native func IsGameFile(relativeFilePath: String) -> Bool;
-  public static native func IsGameDir(relativePath: String) -> Bool;
+  public static native func IsFile(relativeFilePath: String) -> Bool;
+  public static native func IsDirectory(relativePath: String) -> Bool;
   public static native func WriteToOutput(relativeFilePath: String, content: String, opt append: Bool) -> Bool;
 }
 

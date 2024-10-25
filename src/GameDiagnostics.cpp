@@ -1,6 +1,6 @@
 #include "GameDiagnostics.hpp"
 
-bool CyberlibsCore::GameDiagnostics::CreateDiagnosticsDir(const Red::CString& relativePath)
+bool CyberlibsCore::GameDiagnostics::CreateDiagnosticsSubDir(const Red::CString& relativePath)
 {
     try
     {
@@ -49,7 +49,7 @@ Red::CString CyberlibsCore::GameDiagnostics::GetTimestamp(Red::Optional<bool> pa
     return Red::CString(ss.str().c_str());
 }
 
-bool CyberlibsCore::GameDiagnostics::IsGameFile(const Red::CString& relativeFilePath)
+bool CyberlibsCore::GameDiagnostics::IsFile(const Red::CString& relativeFilePath)
 {
     try
     {
@@ -68,7 +68,7 @@ bool CyberlibsCore::GameDiagnostics::IsGameFile(const Red::CString& relativeFile
     }
 }
 
-bool CyberlibsCore::GameDiagnostics::IsGameDir(const Red::CString& relativePath)
+bool CyberlibsCore::GameDiagnostics::IsDirectory(const Red::CString& relativePath)
 {
     try
     {
