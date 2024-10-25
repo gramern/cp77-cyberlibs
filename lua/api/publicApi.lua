@@ -8,11 +8,23 @@ local style = require("globals/custom/style")
 local utils = require("globals/utils")
 
 function publicApi.Version()
-    return table.concat(Cyberlibs.__VERSION, ".")
+    local versionAddendum = Cyberlibs.__VERSION_STATUS and ("-" .. Cyberlibs.__VERSION_STATUS)
+
+    if versionAddendum then
+        versionAddendum = (Cyberlibs.__VERSION_SUFFIX and Cyberlibs.__VERSION_SUFFIX .. versionAddendum) or versionAddendum
+    else
+        versionAddendum = Cyberlibs.__VERSION_SUFFIX
+    end
+
+    if versionAddendum then
+        return table.concat(Cyberlibs.__VERSION, ".") .. versionAddendum
+    else
+        return table.concat(Cyberlibs.__VERSION, ".")
+    end
 end
 
 function publicApi.SetPrintingStyle(isEnabled)
-    style.setEnabled('print', isEnabled)
+    style.setEnabled(isEnabled, 'print')
     logger.info("Printing in style:", isEnabled)
 end
 
@@ -24,6 +36,7 @@ end
 
 function publicApi.Help(query, forceLog)
     local help = require("knowledgeBase/help")
+    local isStyle = style.isEnabled()
     local isTopic, itemType
 
     if not query or query == 0 then
@@ -43,7 +56,7 @@ function publicApi.Help(query, forceLog)
         style.formatHeader("HELP FILES", forceLog)
     else
         style.formatFailHeader("HELP FILES", forceLog)
-        logger.custom(1, forceLog, ' Type Cyberlibs.Help() to start ')
+        logger.custom(isStyle, forceLog, 1, ' Type Cyberlibs.Help() to start ')
     
         return
     end
@@ -75,14 +88,14 @@ function publicApi.Help(query, forceLog)
     end
 
     style.formatFooter(itemsNumber, forceLog)
-    logger.custom(0, forceLog, "")
+    logger.custom(isStyle, forceLog, 0, "")
 
     if not isTopic then
-        logger.custom(1, forceLog, " File not found in databank. ")
-        logger.custom(1, forceLog, ' Type Cyberlibs.Help() to return ')
+        logger.custom(isStyle, forceLog, 1, " File not found in databank. ")
+        logger.custom(isStyle, forceLog, 1, ' Type Cyberlibs.Help() to return ')
     end
 
-    logger.custom(1, forceLog, ' Type Cyberlibs.Help(number) to open file ')
+    logger.custom(isStyle, forceLog, 1, ' Type Cyberlibs.Help(number) to open file ')
 end
 
 function publicApi.GetVersion(fileNameOrPath)
@@ -93,11 +106,11 @@ function publicApi.GetVersion(fileNameOrPath)
     local version
 
     if isData then
-        version = search.getBrowseTable('getVersion')[GameModule.GetTimeDateStamp(fileNameOrPath)]
+        version = search.getBrowseTable('getVersion')[GameModules.GetTimeDateStamp(fileNameOrPath)]
     end
 
     if not version then
-        version = GameModule.GetVersion(fileNameOrPath)
+        version = GameModules.GetVersion(fileNameOrPath)
     end
 
     return version
@@ -105,16 +118,16 @@ end
 
 function publicApi.PrintAttribute(fileNameOrPath, attribute, forceLog)
     local attributes = {
-        ["CompanyName"] = function() return GameModule.GetCompanyName(fileNameOrPath) end,
-        ["Description"] = function() return GameModule.GetDescription(fileNameOrPath) end,
-        ["EntryPoint"] = function() return GameModule.GetEntryPoint(fileNameOrPath) end,
-        ["FilePath"] = function() return GameModule.GetFilePath(fileNameOrPath) end,
-        ["FileSize"] = function() return GameModule.GetFileSize(fileNameOrPath) end,
-        ["FileType"] = function() return GameModule.GetFileType(fileNameOrPath) end,
-        ["LoadAddress"] = function() return GameModule.GetLoadAddress(fileNameOrPath) end,
-        ["MappedSize"] = function() return GameModule.GetMappedSize(fileNameOrPath) end,
-        ["TimeDateStamp"] = function() return GameModule.GetTimeDateStamp(fileNameOrPath) end,
-        ["Version"] = function() return GameModule.GetVersion(fileNameOrPath) end,
+        ["CompanyName"] = function() return GameModules.GetCompanyName(fileNameOrPath) end,
+        ["Description"] = function() return GameModules.GetDescription(fileNameOrPath) end,
+        ["EntryPoint"] = function() return GameModules.GetEntryPoint(fileNameOrPath) end,
+        ["FilePath"] = function() return GameModules.GetFilePath(fileNameOrPath) end,
+        ["FileSize"] = function() return GameModules.GetFileSize(fileNameOrPath) end,
+        ["FileType"] = function() return GameModules.GetFileType(fileNameOrPath) end,
+        ["LoadAddress"] = function() return GameModules.GetLoadAddress(fileNameOrPath) end,
+        ["MappedSize"] = function() return GameModules.GetMappedSize(fileNameOrPath) end,
+        ["TimeDateStamp"] = function() return GameModules.GetTimeDateStamp(fileNameOrPath) end,
+        ["Version"] = function() return GameModules.GetVersion(fileNameOrPath) end,
     }
 
     local arrays = {
@@ -123,23 +136,23 @@ function publicApi.PrintAttribute(fileNameOrPath, attribute, forceLog)
     }
 
     if attributes[attribute] ~= nil then
-        logger.custom(0, forceLog, attributes[attribute]())
+        logger.custom(style.isEnabled(), forceLog, 0, attributes[attribute]())
     elseif arrays[attribute] ~= nil then
         arrays[attribute]()
     else
-        logger.custom(1, false, " Attribute not found in databank. ")
+        logger.custom(style.isEnabled(), false, 1, " Attribute not found in databank. ")
     end
 end
 
 function publicApi.PrintExport(fileNameOrPath, forceLog)
 
-    if not GameModule.IsLoaded(fileNameOrPath) then
-        logger.custom(1, false, " Module not found in databank. ")
+    if not GameModules.IsLoaded(fileNameOrPath) then
+        logger.custom(style.isEnabled(), false, 1, " Module not found in databank. ")
 
         return
     end
 
-    local exportArray = GameModule.GetExport(fileNameOrPath)
+    local exportArray = GameModules.GetExport(fileNameOrPath)
 
     if #exportArray == 0 then
         logger.info()
@@ -167,13 +180,13 @@ end
 
 function publicApi.PrintImport(fileNameOrPath, forceLog)
 
-    if not GameModule.IsLoaded(fileNameOrPath) then
-        logger.custom(1, false, " Module not found in databank. ")
+    if not GameModules.IsLoaded(fileNameOrPath) then
+        logger.custom(style.isEnabled(), false, 1, " Module not found in databank. ")
 
         return
     end
 
-    local importArray = GameModule.GetImport(fileNameOrPath)
+    local importArray = GameModules.GetImport(fileNameOrPath)
 
     if #importArray == 0 then
         logger.info()
@@ -195,11 +208,11 @@ function publicApi.PrintImport(fileNameOrPath, forceLog)
 end
 
 function publicApi.PrintIsLoaded(fileNameOrPath, forceLog)
-    logger.custom(0, forceLog, GameModule.IsLoaded(fileNameOrPath))
+    logger.custom(style.isEnabled(), forceLog, 0, GameModules.IsLoaded(fileNameOrPath))
 end
 
 function publicApi.PrintLoadedModules(forceLog)
-    local modulesArray = GameModule.GetLoadedModules()
+    local modulesArray = GameModules.GetLoadedModules()
 
     if #modulesArray == 0 then
         logger.info()
@@ -210,18 +223,18 @@ function publicApi.PrintLoadedModules(forceLog)
     style.formatHeader("LOADED MODULES", forceLog)
 
     for _, module in ipairs(modulesArray) do
-        logger.custom(0, forceLog, utils.getFileName(module))
+        logger.custom(style.isEnabled(), forceLog, 0, utils.getFileName(module))
     end
 
     style.formatFooter(#modulesArray, forceLog)
 end
 
 function publicApi.PrintTimeDateStamp(fileNameOrPath, forceLog)
-    logger.custom(0, forceLog, GameModule.GetTimeDateStamp(fileNameOrPath))
+    logger.custom(style.isEnabled(), forceLog, 0, GameModules.GetTimeDateStamp(fileNameOrPath))
 end
 
 function publicApi.PrintVersion(fileNameOrPath, forceLog)
-    logger.custom(0, forceLog, GameModule.GetVersion(fileNameOrPath))
+    logger.custom(style.isEnabled(), forceLog, 0, GameModules.GetVersion(fileNameOrPath))
 end
 
 function publicApi.onInit()

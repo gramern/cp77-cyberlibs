@@ -2,8 +2,8 @@ Cyberlibs = {
     __NAME = "Cyberlibs",
     __EDITION = nil,
     __VERSION = { 0, 2, 0},
-    __VERSION_SUFFIX = "",
-    __VERSION_STATUS = "alpha1",
+    __VERSION_SUFFIX = nil,
+    __VERSION_STATUS = nil,
     __DESCRIPTION = "Diagnostics tool to inspect and parse libraries loaded by Cyberpunk 2077 during runtime.",
     __LICENSE =
         [[
@@ -41,6 +41,7 @@ local ImGuiExt = require("globals/ImGuiExt")
 local logger = require("globals/logger")
 local search = require("globals/search")
 local settings = require("globals/settings")
+local style = require("globals/custom/style")
 local tables = require("globals/tables")
 local utils = require("globals/utils")
 
@@ -50,12 +51,36 @@ local utils = require("globals/utils")
 
 local publicApi = require("api/publicApi")
 
+local function registerPublicApi()
+    Cyberlibs = tables.add(Cyberlibs, publicApi)
+end
+
 local appApi = {}
 
-function appApi.IsRootWindow()
+function appApi.isRootWindow()
     return isRootWindow
 end
 
+local function registerAppModulesApi()
+    local modulesDir = dir("appModules")
+
+    for _, folder in pairs(modulesDir) do
+        local modulePath = "appModules/" .. folder.name .. "/main.lua"
+        local moduleFile = loadfile(modulePath)
+
+        if moduleFile then
+            local loadedModule = moduleFile()
+
+            if loadedModule.appApi then
+                appApi = tables.add(appApi, loadedModule.appApi)
+            end
+
+            if loadedModule.publicApi then
+                Cyberlibs = tables.add(Cyberlibs, loadedModule.publicApi)
+            end
+        end
+    end
+end
 
 ------------------
 -- App Modules
@@ -63,47 +88,50 @@ end
 
 local appModules = {}
 
+local appModulesContents = {}
+
 local function verifyAppModule(path)
-    local folderDir = dir(path)
+    local moduleFile = loadfile(path)(appApi)
 
-    for _, file in pairs(folderDir) do
-        if string.find(file.name, "main.lua$") then
-            local modulePath = path .. "/main.lua"
-            local moduleFile = loadfile(modulePath)(appApi)
+    if moduleFile.__NAME and
+        moduleFile.__TITLE and
+        moduleFile.draw and
+        type(moduleFile.draw) == "function" then
 
-            if moduleFile ~= nil and
-                    moduleFile.__NAME and
-                    moduleFile.__TITLE and
-                    moduleFile.draw and
-                    type(moduleFile.draw) == "function" then
-
-                return moduleFile
-            end
-        end
+        return moduleFile
     end
+end
+
+local function sortAppModules()
+    appModulesContents = tables.assignKeysOrder(appModules)
+
+    table.sort(appModulesContents, function(a, b)
+        return appModules[a].__NAME < appModules[b].__NAME
+    end)
 end
 
 local function registerAppModules()
     local modulesDir = dir("appModules")
 
     for _, folder in pairs(modulesDir) do
-        if not string.find(folder.name, "rootWindow$") then
-            local folderPath = "appModules/" .. folder.name
-            local loadedModule = verifyAppModule(folderPath)
+        local modulePath = "appModules/" .. folder.name .. "/main.lua"
+        local loadedModule = verifyAppModule(modulePath)
 
-            if loadedModule ~= nil then
-                appModules[folder.name] = loadedModule
-                logger.debug("Added app module:", folder.name)
-            else
-                logger.debug("App module discarded:", folder.name)
-            end
+        if loadedModule ~= nil then
+            appModules[folder.name] = loadedModule
+            logger.debug("Added app module:", folder.name)
+        else
+            logger.debug("App module discarded:", folder.name)
         end
     end
+
+    sortAppModules()
 end
 
 ------------------
---- App Inputs
- 
+--- App Modules Inputs
+------------------
+
 local function executeInput(keypress, keyPressCallback, keyReleaseCallback)
     if keypress then
         if keyPressCallback then
@@ -118,14 +146,14 @@ local function executeInput(keypress, keyPressCallback, keyReleaseCallback)
     end
 end
 
-local function registerInputs()
+local function registerAppModulesInputs()
     for appModule, _ in pairs(appModules) do
         local inputs = appModules[appModule].inputs
 
         if inputs ~= nil  then
             for i, _ in ipairs(inputs) do
                 registerInput(inputs[i].id, 
-                                appModules[appModule].__NAME .. ': ' .. inputs[i].description,
+                                appModules[appModule].__NAME .. ": " .. inputs[i].description,
                                 function(keypress)
 
                     executeInput(keypress, inputs[i].keyPressCallback, inputs[i].keyReleaseCallback)
@@ -136,9 +164,10 @@ local function registerInputs()
 end
 
 ------------------
---- App Events
+--- App Modules Events
+------------------
 
-local function fireAppModuleEvents(appEventName, ...)
+local function fireAppModulesEvents(appEventName, ...)
     for appModule, _ in pairs(appModules) do
         if appModules[appModule].events ~= nil and
             appModules[appModule].events[appEventName] ~= nil then
@@ -174,6 +203,7 @@ local tabHelp = {
 
 local function initializeModSettings()
     local appSettings = {
+        stylizePrints = false,
         tooltips = true,
         tabBarDropdown = false,
         tabCloseOnMiddleButtonClick = false
@@ -186,7 +216,7 @@ local function initializeModSettings()
     end
 end
 
-local function openTabGameModules()
+local function openDefaultTab()
     local gameModules = appModules.gameModules
     local tabBarLabel = "RootWindow.TabBar"
 
@@ -236,14 +266,14 @@ local function drawHelpTreeNode(node, name, depth, nodePath)
     local flags = ImGuiTreeNodeFlags.SpanFullWidth
     local nodeType = type(node)
     local isLeaf = nodeType ~= "table" or next(node) == nil
-    local textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor('textAlt')
+    local textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor("textAlt")
 
     if isLeaf then
         flags = flags + ImGuiTreeNodeFlags.Leaf
 
         if nodePath == tabHelp.selectedTopic then
             flags = flags + ImGuiTreeNodeFlags.Selected
-            textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor('text')
+            textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor("text")
         end
     end
 
@@ -254,7 +284,7 @@ local function drawHelpTreeNode(node, name, depth, nodePath)
         local rectSize = ImVec2.new(rectPos.x + contentRegionAvailX, rectPos.y + ImGui.GetFrameHeight())
 
         if ImGui.IsMouseHoveringRect(rectPos.x, rectPos.y, rectSize.x, rectSize.y - 10) then
-            textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor('text')
+            textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor("text")
         end
     end
 
@@ -394,6 +424,7 @@ local function drawSettingsTab()
     local tabBarDropdownBool, tabBarDropdownToggle
     local tabOnMiddleClickBool, tabOnMiddleClickToggle
     local tooltipsBool, tooltipsToggle
+    local printStylingBool, printStylingToggle
 
     search.updateFilterInstance("RootWindow.SettingsTab")
     ImGui.BeginChildFrame(ImGui.GetID("RootWindow.Settings"),
@@ -404,12 +435,16 @@ local function drawSettingsTab()
     ------------------
     --- App Modules Settings
 
-    for _, appModule in pairs(appModules) do
-        ImGui.Separator()
-        ImGuiExt.TextTitle(appModule.__NAME, 0.9, true)
-        ImGui.Spacing()
-        appModule.drawSettings()
-        ImGui.Text("")
+    for _, key in ipairs(appModulesContents) do
+        local appModule = appModules[key]
+
+        if appModule.drawSettings then
+            ImGui.Separator()
+            ImGuiExt.TextTitle(appModule.__NAME, 0.9, true)
+            ImGui.Spacing()
+            appModule.drawSettings()
+            ImGui.Text("")
+        end
     end
 
     ------------------
@@ -453,13 +488,27 @@ local function drawSettingsTab()
 
     ImGui.Text("")
     ImGui.Separator()
+    ImGuiExt.TextTitle("Printing / Dumping", 0.9, true)
+    ImGui.Spacing()
+
+    printStylingBool, printStylingToggle = ImGuiExt.Checkbox("Stylize prints / data dumps",
+                                                                settings.getModSetting("stylizePrints") or false,
+                                                                tabOnMiddleClickToggle)
+    
+    if printStylingToggle then
+        settings.setModSetting("stylizePrints", printStylingBool)
+        style.setEnabled(settings.getModSetting("stylizePrints"))
+    end
+
+    ImGui.Text("")
+    ImGui.Separator()
     ImGuiExt.TextTitle("Debug", 0.9, true)
     ImGui.Spacing()
 
-    debugBool, debugToggle = ImGuiExt.Checkbox("Enable debug mode", settings.getModSetting('debugMode') or false, debugToggle)
+    debugBool, debugToggle = ImGuiExt.Checkbox("Enable debug mode", settings.getModSetting("debugMode") or false, debugToggle)
     if debugToggle then
-        settings.setModSetting('debugMode', debugBool)
-        logger.setDebug(settings.getModSetting('debugMode'))
+        settings.setModSetting("debugMode", debugBool)
+        logger.setDebug(settings.getModSetting("debugMode"))
     end
 
     ImGui.Text("")
@@ -498,15 +547,10 @@ local function drawRootPopupMenu()
     if ImGui.BeginPopupContextItem("RootWindow.RootPopupMenu", ImGuiPopupFlags.MouseButtonLeft) then
         local tabBarLabel = "RootWindow.TabBar"
 
-        for _, appModule in pairs(appModules) do
-            local appModuleIcon
-
-            if appModule.__ICON then
-                appModuleIcon = appModule.__ICON
-            else
-                appModuleIcon = nil
-            end
-
+        for _, key in ipairs(appModulesContents) do
+            local appModule = appModules[key]
+            local appModuleIcon = appModule.__ICON or nil
+        
             if ImGui.MenuItem(ImGuiExt.TextIcon(appModule.__NAME, appModuleIcon)) then
                 ImGuiExt.AddTab(tabBarLabel, appModule.__NAME, appModule.__TITLE, appModule.draw)
             end
@@ -535,7 +579,7 @@ local function drawRootPopupMenu()
             ImGuiExt.AddTab(tabBarLabel, "About", "About Cyberlibs", drawAboutTab)
         end
 
-        if settings.getModSetting('debugMode') then
+        if settings.getModSetting("debugMode") then
             ImGui.Separator()
             drawDebugMenu()
         end
@@ -644,20 +688,24 @@ end
 -- Registers
 ------------------
 
+registerPublicApi()
+registerAppModulesApi()
+registerAppModules()
+registerAppModulesInputs()
+
 registerForEvent("onInit", function()
     logger.setModName(Cyberlibs.__NAME)
 
-    Cyberlibs = tables.add(Cyberlibs, publicApi)
-
     publicApi.onInit()
     settings.onInit()
-    logger.setDebug(settings.getModSetting('debugMode'))
-    ImGuiExt.onInit(settings.getModSetting('windowTheme'), Cyberlibs.Version() ..
-                                            Cyberlibs.__VERSION_SUFFIX ..
-                                            "-" ..
-                                            Cyberlibs.__VERSION_STATUS)
+    logger.setDebug(settings.getModSetting("debugMode"))
+    style.setEnabled(settings.getModSetting("stylizePrints"))
+
+
+
+    ImGuiExt.onInit(settings.getModSetting("windowTheme"), Cyberlibs.Version())
     initializeModSettings()
-    fireAppModuleEvents('onInit')
+    fireAppModulesEvents("onInit")
 end)
 
 registerForEvent("onOverlayOpen", function()
@@ -665,7 +713,8 @@ registerForEvent("onOverlayOpen", function()
 
     settings.onOverlayOpen()
     ImGuiExt.onOverlayOpen()
-    openTabGameModules()
+    fireAppModulesEvents("onOverlayOpen")
+    openDefaultTab()
 end)
 
 registerForEvent("onOverlayClose", function()
@@ -673,12 +722,13 @@ registerForEvent("onOverlayClose", function()
 
     search.flushBrowse()
     search.flushFilter()
-    fireAppModuleEvents('onOverlayClose')
+    fireAppModulesEvents("onOverlayClose")
     settings.onOverlayClose()
 end)
 
 registerForEvent("onUpdate", function(deltaTime)
     utils.updateDelays(deltaTime)
+    fireAppModulesEvents("onUpdate", deltaTime)
 end)
 
 registerForEvent("onDraw", function()
@@ -687,10 +737,9 @@ registerForEvent("onDraw", function()
     if isRootWindow then
         drawRootWindow()
     end
-end)
 
-registerAppModules()
-registerInputs()
+    fireAppModulesEvents("onDraw")
+end)
 
 return Cyberlibs
 

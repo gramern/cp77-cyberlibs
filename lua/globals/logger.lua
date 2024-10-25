@@ -66,10 +66,11 @@ function logger.warning(...)
     printer(false, false, parser("warning", ...))
 end
 
+---@param printModName boolean
 ---@param bracketizeParameter number
 ---@param forceLog boolean
 ---@param ... any
-function logger.custom(bracketizeParameter, forceLog, ...)
+function logger.custom(printModName, forceLog, bracketizeParameter, ...)
     local contents = {...}
 
     if #contents == 0 then
@@ -86,7 +87,11 @@ function logger.custom(bracketizeParameter, forceLog, ...)
         end
     end
 
-    local formattedContents = bracketizer(var.modName) .. " " .. table.concat(contents, " ")
+    local formattedContents = " " .. table.concat(contents, " ")
+
+    if printModName then
+        formattedContents = bracketizer(var.modName) .. formattedContents
+    end
 
     printer(false,  forceLog, formattedContents)
 end

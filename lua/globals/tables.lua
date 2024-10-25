@@ -34,6 +34,7 @@ function tables.assignKeysOrder(t)
     for k in pairs(t) do
         table.insert(sortedKeys, k)
     end
+
     table.sort(sortedKeys)
 
     return sortedKeys

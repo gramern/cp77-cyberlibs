@@ -6,7 +6,7 @@
 namespace CyberlibsCore
 {
 
-struct GameModuleExportArray
+struct GameModulesExportArray
 {
     Red::CString entry;
     int32_t ordinal;
@@ -14,16 +14,16 @@ struct GameModuleExportArray
     Red::CString forwarderName;
 };
 
-struct GameModuleImportArray
+struct GameModulesImportArray
 {
     Red::CString fileName;
     Red::DynArray<Red::CString> entries;
 };
 } // namespace CyberlibsCore
 
-RTTI_DEFINE_CLASS(CyberlibsCore::GameModuleExportArray,
+RTTI_DEFINE_CLASS(CyberlibsCore::GameModulesExportArray,
 {
-    RTTI_ALIAS("CyberlibsCore.GameModuleExportArray");
+    RTTI_ALIAS("CyberlibsCore.GameModulesExportArray");
 
     RTTI_PROPERTY(entry);
     RTTI_PROPERTY(ordinal);
@@ -31,9 +31,9 @@ RTTI_DEFINE_CLASS(CyberlibsCore::GameModuleExportArray,
     RTTI_PROPERTY(forwarderName);
 });
 
-RTTI_DEFINE_CLASS(CyberlibsCore::GameModuleImportArray,
+RTTI_DEFINE_CLASS(CyberlibsCore::GameModulesImportArray,
 {
-    RTTI_ALIAS("CyberlibsCore.GameModuleImportArray");
+    RTTI_ALIAS("CyberlibsCore.GameModulesImportArray");
 
     RTTI_PROPERTY(fileName);
     RTTI_PROPERTY(entries);

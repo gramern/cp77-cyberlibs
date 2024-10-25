@@ -1,4 +1,4 @@
-# GameModule
+# GameModules
 
 ## `IsLoaded()`
 
@@ -13,7 +13,7 @@ Returns whether a library file has been loaded by the game. Can be used to detec
 
 ### Exemplary Usage (CET-lua):
 ```
-local isNukem = GameModule.IsLoaded("dlssg_to_fsr3_amd_is_better.dll")
+local isNukem = GameModules.IsLoaded("dlssg_to_fsr3_amd_is_better.dll")
     
 print(isNukem)
 ```
@@ -31,7 +31,7 @@ Returns version of a loaded library if available in the file.
 
 ### Exemplary Usage (CET-lua):
 ```
-local dlssgVer = GameModule.GetVersion("nvngx_dlssg.dll")
+local dlssgVer = GameModules.GetVersion("nvngx_dlssg.dll")
     
 print(dlssgVer)
 ```

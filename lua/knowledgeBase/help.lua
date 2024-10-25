@@ -41,7 +41,7 @@ local function intializeTable()
                 Cyberlibs.Help(methodName, forceLog)]],
             ["Cyberlibs.GetVersion(fileNameOrPath)"] =
                 [[
-                --- Returns a module version. Compared to GameModule.GetVersion(), additionally
+                --- Returns a module version. Compared to GameModules.GetVersion(), additionally
                 --- checks Cyberlibs' knowledge database to find requested info.
                 ---
                 ---@return string Cyberlibs version
@@ -95,142 +95,142 @@ local function intializeTable()
                 ---@param forceLog boolean Whether to force logging
                 Cyberlibs.PrintVersion(fileNameOrPath, forceLog)]]
         },
-        ["GameModule Class"] = {
-            ["[ INFO ] public native class GameModule"] =
+        ["GameModules Class"] = {
+            ["[ INFO ] public native class GameModules"] =
                 [[
-                public native class GameModule
+                public native class GameModules
                  
                 --- Example Lua:    
-                if type(GameModule) == "userdata" then
-                        print(GameModule.GetVersion("libxess.dll"))
+                if type(GameModules) == "userdata" then
+                        print(GameModules.GetVersion("libxess.dll"))
                 else
                         print("Cyberlibs is not installed or loaded")
                 end
                 
                 // Example Redscript:
-                let version: String = GameModule.GetVersion("libxess.dll")]],
-            ["GameModule.GetCompanyName(fileNameOrPath)"] =
+                let version: String = GameModules.GetVersion("libxess.dll")]],
+            ["GameModules.GetCompanyName(fileNameOrPath)"] =
                 [[
                 --- Gets the company name associated with the module
                 --- 
                 ---@param fileNameOrPath string The file name or path of the module
                 ---@return string The company name
-                GameModule.GetCompanyName(fileNameOrPath)
+                GameModules.GetCompanyName(fileNameOrPath)
                 
                 // Redscript:
                 public static native func GetCompanyName(fileNameOrPath: String) -> String]],
-            ["GameModule.GetDescription(fileNameOrPath)"] =
+            ["GameModules.GetDescription(fileNameOrPath)"] =
                 [[
                 --- Retrieves the description of the module
                 --- 
                 ---@param fileNameOrPath string The file name or path of the module
                 ---@return string The module description
-                GameModule.GetDescription(fileNameOrPath)
+                GameModules.GetDescription(fileNameOrPath)
                 
                 // Redscript:
                 public static native func GetDescription(fileNameOrPath: String) -> String]],
-            ["GameModule.GetEntryPoint(fileNameOrPath)"] =
+            ["GameModules.GetEntryPoint(fileNameOrPath)"] =
                 [[
                 --- Obtains the entry point of the module
                 --- 
                 ---@param fileNameOrPath string The file name or path of the module
                 ---@return string The entry point
-                GameModule.GetEntryPoint(fileNameOrPath)
+                GameModules.GetEntryPoint(fileNameOrPath)
                 
                 // Redscript:
                 public static native func GetEntryPoint(fileNameOrPath: String) -> String]],
-            ["GameModule.GetExport(fileNameOrPath)"] =
+            ["GameModules.GetExport(fileNameOrPath)"] =
                 [[
                 --- Retrieves the export information of the module
                 --- 
                 ---@param fileNameOrPath string The file name or path of the module
                 ---@return table Array of ModuleInfoExportArray containing export information
-                GameModule.GetExport(fileNameOrPath)
+                GameModules.GetExport(fileNameOrPath)
                 
                 // Redscript:
                 public static native func GetExport(fileNameOrPath: String) -> array<ModuleInfoExportArray>]],
-            ["GameModule.GetFilePath(fileNameOrPath)"] =
+            ["GameModules.GetFilePath(fileNameOrPath)"] =
                 [[
                 --- Gets the full file path of the module
                 --- 
                 ---@param fileNameOrPath string The file name or path of the module
                 ---@return string The full file path
-                GameModule.GetFilePath(fileNameOrPath)
+                GameModules.GetFilePath(fileNameOrPath)
                 
                 // Redscript:
                 public static native func GetFilePath(fileNameOrPath: String) -> String]],
-            ["GameModule.GetFileSize(fileNameOrPath)"] =
+            ["GameModules.GetFileSize(fileNameOrPath)"] =
                 [[
                 --- Retrieves the file size of the module
                 --- 
                 ---@param fileNameOrPath string The file name or path of the module
                 ---@return string The file size
-                GameModule.GetFileSize(fileNameOrPath)
+                GameModules.GetFileSize(fileNameOrPath)
                 
                 // Redscript:
                 public static native func GetFileSize(fileNameOrPath: String) -> String]],
-            ["GameModule.GetImport(fileNameOrPath)"] =
+            ["GameModules.GetImport(fileNameOrPath)"] =
                 [[
                 --- Obtains the import information of the module
                 --- 
                 ---@param fileNameOrPath string The file name or path of the module
                 ---@return table Array of ModuleInfoImportArray containing import information
-                GameModule.GetImport(fileNameOrPath)
+                GameModules.GetImport(fileNameOrPath)
                 
                 // Redscript:
                 public static native func GetImport(fileNameOrPath: String) -> array<ModuleInfoImportArray>]],
-            ["GameModule.GetLoadAddress(fileNameOrPath)"] =
+            ["GameModules.GetLoadAddress(fileNameOrPath)"] =
                 [[
                 --- Retrieves the load address of the module
                 --- 
                 ---@param fileNameOrPath string The file name or path of the module
                 ---@return string The load address
-                GameModule.GetLoadAddress(fileNameOrPath)
+                GameModules.GetLoadAddress(fileNameOrPath)
                 
                 // Redscript:
                 public static native func GetLoadAddress(fileNameOrPath: String) -> String]],
-            ["GameModule.GetLoadedModules()"] =
+            ["GameModules.GetLoadedModules()"] =
                 [[
                 --- Gets a list of all loaded modules
                 --- 
                 ---@return table Array of strings containing the names of loaded modules
-                GameModule.GetLoadedModules()
+                GameModules.GetLoadedModules()
                 
                 // Redscript:
                 public static native func GetLoadedModules() -> array<String>]],
-            ["GameModule.GetMappedSize(fileNameOrPath)"] =
+            ["GameModules.GetMappedSize(fileNameOrPath)"] =
                 [[
                 --- Retrieves the mapped size of the module in memory
                 --- 
                 ---@param fileNameOrPath string The file name or path of the module
                 ---@return string The mapped size
-                GameModule.GetMappedSize(fileNameOrPath)
+                GameModules.GetMappedSize(fileNameOrPath)
                 
                 // Redscript:
                 public static native func GetMappedSize(fileNameOrPath: String) -> String]],
-            ["GameModule.GetVersion(fileNameOrPath)"] =
+            ["GameModules.GetVersion(fileNameOrPath)"] =
                 [[
                 --- Gets the version information of the module
                 --- 
                 ---@param fileNameOrPath string The file name or path of the module
                 ---@return string The version
-                GameModule.GetVersion(fileNameOrPath)
+                GameModules.GetVersion(fileNameOrPath)
                 
                 // Redscript:
                 public static native func GetVersion(fileNameOrPath: String) -> String]],
 
-            ["GameModule.IsLoaded(fileNameOrPath)"] =
+            ["GameModules.IsLoaded(fileNameOrPath)"] =
                 [[
                 --- Checks if a module is currently loaded
                 --- 
                 ---@param fileNameOrPath string The file name or path of the module to check
                 ---@return boolean Indicating whether the module is loaded
-                GameModule.IsLoaded(fileNameOrPath)
+                GameModules.IsLoaded(fileNameOrPath)
                 
                 // Redscript:
                 public static native func IsLoaded(fileNameOrPath: String) -> Bool]]
         },
-        ["GameModule Structs"] = {
+        ["GameModules Structs"] = {
         ["public native struct GameModuleExportArray"] =
                 [[
                 public native struct GameModuleExportArray {

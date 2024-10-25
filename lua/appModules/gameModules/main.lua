@@ -22,10 +22,10 @@ local modules = {
 local widgetState = {
     __global = {
         exportTableItemsPerPage = function()
-            return settings.getUserSetting('gameModules', 'exportTableItemsPerPage') or 500
+            return settings.getUserSetting("gameModules", "exportTableItemsPerPage") or 500
         end,
         importNodesCharThreshold = function()
-            return settings.getUserSetting('gameModules', 'importNodesCharThreshold') or 2
+            return settings.getUserSetting("gameModules", "importNodesCharThreshold") or 2
         end,
     }
 }
@@ -93,7 +93,7 @@ local function categorizeLoadedModules(loadedModules)
 end
 
 local function getLoadedModules()
-    local loadedPaths = GameModule.GetLoadedModules()
+    local loadedPaths = GameModules.GetLoadedModules()
     local loadedModules = {}
     local fileNameCount = {}
 
@@ -136,22 +136,22 @@ local function openModule(onScreenName, fileName, filePath)
     end
 
     local moduleData = {
-        ["Company Name"] = GameModule.GetCompanyName(filePath),
-        ["Description"] = GameModule.GetDescription(filePath),
-        ["Entry Point"] = GameModule.GetEntryPoint(filePath),
-        ["Export"] = GameModule.GetExport(filePath),
+        ["Company Name"] = GameModules.GetCompanyName(filePath),
+        ["Description"] = GameModules.GetDescription(filePath),
+        ["Entry Point"] = GameModules.GetEntryPoint(filePath),
+        ["Export"] = GameModules.GetExport(filePath),
         ["File Name"] = fileName,
         ["File Path"] = filePath,
-        ["File Size"] = GameModule.GetFileSize(filePath),
-        ["File Type"] = GameModule.GetFileType(filePath),
+        ["File Size"] = GameModules.GetFileSize(filePath),
+        ["File Type"] = GameModules.GetFileType(filePath),
         ["Import"] = {},
-        ["Load Address"] = GameModule.GetLoadAddress(filePath),
-        ["Mapped Size"] = GameModule.GetMappedSize(filePath),
-        ["TimeDateStamp"] = GameModule.GetTimeDateStamp(filePath),
+        ["Load Address"] = GameModules.GetLoadAddress(filePath),
+        ["Mapped Size"] = GameModules.GetMappedSize(filePath),
+        ["TimeDateStamp"] = GameModules.GetTimeDateStamp(filePath),
         ["Version"] = Cyberlibs.GetVersion(filePath)
     }
     
-    local exportStruct = GameModule.GetExport(filePath)
+    local exportStruct = GameModules.GetExport(filePath)
 
     if next(exportStruct) then
         for i, export in ipairs(exportStruct) do
@@ -164,7 +164,7 @@ local function openModule(onScreenName, fileName, filePath)
         end
     end
 
-    local importStruct = GameModule.GetImport(filePath)
+    local importStruct = GameModules.GetImport(filePath)
 
     if next(importStruct) then
         for i, import in ipairs(importStruct) do
@@ -201,7 +201,7 @@ local function drawViewerRow(label, value, rowWidth, labelWidth)
 
     value = value or "-"
     
-    ImGui.InputText('##' .. label, tostring(value), 256)
+    ImGui.InputText("##" .. label, tostring(value), 256)
 
     if ImGui.BeginPopupContextItem(label, ImGuiPopupFlags.MouseButtonRight) then
         ImGuiExt.MenuItemCopyValue(value, "Value")
@@ -212,7 +212,7 @@ local function drawViewerRow(label, value, rowWidth, labelWidth)
 end
 
 local function drawTableCellTooltip(text)
-    ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor('text'))
+    ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor("text"))
     ImGuiExt.SetTooltip(text)
     ImGui.PopStyleColor()
 end
@@ -498,7 +498,7 @@ end
 local function drawImportTreeNode(node, importName, importLabel)
     local flags = ImGuiTreeNodeFlags.SpanFullWidth
     local contentRegionAvailX = ImGui.GetContentRegionAvail()
-    local textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor('textAlt')
+    local textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor("textAlt")
     local shouldOpen
 
     if not widgetState[importLabel].isContextPopup then
@@ -510,7 +510,7 @@ local function drawImportTreeNode(node, importName, importLabel)
             widgetState[importLabel].hovered = importName
 
             if ImGui.IsMouseClicked(ImGuiMouseButton.Right) then
-                textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor('text')
+                textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor("text")
                 widgetState[importLabel].clicked = importName
             end
         end
@@ -521,7 +521,7 @@ local function drawImportTreeNode(node, importName, importLabel)
     if importName == widgetState[importLabel].selected then
         flags = flags + ImGuiTreeNodeFlags.Selected
         shouldOpen = true
-        textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor('text')
+        textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor("text")
     end
 
     if widgetState[importLabel].commands.jumpToSelected and importName == widgetState[importLabel].selected then
@@ -914,7 +914,13 @@ local function addModuleTab(onScreenName, fileName, filePath)
 end
 
 local function drawSelectedModuleContextMenu(onScreenName, fileName, filePath)
-    ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor('text'))
+    if ImGui.IsPopupOpen("GameModules.SelectedModule.PopupMenu") then
+        widgetState.__global.isContextPopup = true
+    else
+        widgetState.__global.isContextPopup = false
+    end
+
+    ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor("text"))
 
     if ImGui.BeginPopup("GameModules.SelectedModule.PopupMenu") then
         if ImGui.MenuItem(ImGuiExt.TextIcon("Show in new tab", IconGlyphs.OpenInNew)) then
@@ -963,12 +969,14 @@ local function handleSelectedModule(regionPos, regionSize, onScreenName, fileNam
 end
 
 local function draw()
-    local resolutionFactor = ImGuiExt.GetResolutionFactor()
     local scaleFactor = ImGuiExt.GetScaleFactor()
+    local textHeight = ImGui.GetTextLineHeight()
     local windowWidth = ImGui.GetWindowWidth()
     local windowPaddingX = ImGui.GetStyle().WindowPadding.x
     local framePaddingX = ImGui.GetStyle().FramePadding.x
+    local itemSpacingY = ImGui.GetStyle().ItemSpacing.y
     local itemWidth = windowWidth - 2 * windowPaddingX
+    local cellHeight = textHeight + itemSpacingY
     local regionPos = {}
 
     search.updateFilterInstance("GameModules.Root")
@@ -997,16 +1005,33 @@ local function draw()
     ImGui.BeginChildFrame(ImGui.GetID("GameModules.LoadedModules.List"), itemWidth,
                                                                         320 * scaleFactor,
                                                                         ImGuiWindowFlags.NoBackground)
-    ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor('textAlt'))
+
+    ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor("textAlt"))
     ImGui.Columns(2, "##GameModules.LoadedModules.List")
     ImGui.SetColumnWidth(0, headerColumnWidth - windowPaddingX)
+    ImGui.PopStyleColor()
 
     for _, module in ipairs(modules.filtered) do
         if modules.selected[module.onScreenName] == nil then
             modules.selected[module.onScreenName] = false
         end
 
+        local textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor("textAlt")
         regionPos.x, regionPos.y = ImGui.GetCursorScreenPos()
+        regionPos.y = regionPos.y - (itemSpacingY / 2)
+        local regionSize = ImVec2.new(windowWidth, cellHeight)
+
+        if not widgetState.__global.isContextPopup or
+            modules.selected[module.onScreenName] == true then
+
+            if ImGuiExt.IsMouseHoverOverRegion(regionPos, regionSize) or
+                modules.selected[module.onScreenName] == true then
+
+                textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor("text")
+            end
+        end
+
+        ImGui.PushStyleColor(ImGuiCol.Text, textRed, textGreen, textBlue, textAlpha)
 
         if ImGui.Selectable(module.onScreenName, modules.selected[module.onScreenName],
                                                 ImGuiSelectableFlags.SpanAllColumns) then
@@ -1016,8 +1041,7 @@ local function draw()
         ImGui.NextColumn()
         ImGui.Text(module.category)
         ImGui.NextColumn()
-
-        local regionSize = ImVec2.new(windowWidth, 7 * resolutionFactor)
+        ImGui.PopStyleColor()
 
         if modules.selected[module.onScreenName] == true then
             handleSelectedModule(regionPos, regionSize, module.onScreenName, module.fileName, module.filePath)
@@ -1027,7 +1051,6 @@ local function draw()
     end
 
     ImGui.Columns(1)
-    ImGui.PopStyleColor()
     ImGui.EndChildFrame()
     ImGui.Separator()
     ImGui.Spacing()
@@ -1072,7 +1095,7 @@ local function drawSettings()
     ImGuiExt.TextAlt("Module export table entries per page")
     
     if itemsPerPageToggle then
-        settings.setUserSetting('gameModules', 'exportTableItemsPerPage', itemsPerPage)
+        settings.setUserSetting("gameModules", "exportTableItemsPerPage", itemsPerPage)
     end
 
     ImGui.SetNextItemWidth(200 * ImGuiExt.GetScaleFactor())
@@ -1083,7 +1106,7 @@ local function drawSettings()
     ImGuiExt.TextAlt("Search query characters number to open import nodes")
 
     if charThresholdToggle then
-        settings.setUserSetting('gameModules', 'importNodesCharThreshold', charThreshold)
+        settings.setUserSetting("gameModules", "importNodesCharThreshold", charThreshold)
     end
 
     ImGuiExt.TextAlt("Higher values above might cause noticeable performance hit when viewing a module.")
@@ -1091,29 +1114,20 @@ end
 
 local events = {}
 
-function events.onInit()
+function events.onOverlayOpen()
     refreshLoadedModules()
 end
-
--- local function inputKeyPressPrint()
---     print("KeyPress test print")
--- end
-
--- local function inputKeyReleasePrint()
---     print("KeyRelease test print")
--- end
 
 return {
     __NAME = "Game Modules",
     __ICON = IconGlyphs.Bookshelf,
     __VERSION = { 0, 2, 0},
     __TITLE = "",
+    appApi = {
+        categorizeLoadedModules = categorizeLoadedModules,
+        getLoadedModules = getLoadedModules
+    },
     draw = draw,
     drawSettings = drawSettings,
-    events = events,
-    -- inputs = {
-    --     { id = "keypressTest", description = "Key Press & Release Test", keyPressCallback = inputKeyPressPrint, keyReleaseCallback = inputKeyReleasePrint },
-    --     { id = "hotkeyPressTest", description = "HotKey on Press Test", keyPressCallback = inputKeyPressPrint },
-    --     { id = "hotkeyReleaseTest", description = "HotKey on Release Test", keyReleaseCallback = inputKeyReleasePrint }
-    -- }
+    events = events
 }

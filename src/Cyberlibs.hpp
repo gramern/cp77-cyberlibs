@@ -2,33 +2,42 @@
 
 #include <RED4ext/RED4ext.hpp>
 #include <RedLib.hpp>
+#include "GameModules.hpp"
 
 namespace CyberlibsCore
 {
 class Cyberlibs : Red::IScriptable
 {
 public:
-    static Red::CString Version();
+    inline static Red::CString Version()
+    {
+        return GameModules::GetVersion("Cyberlibs.dll");
+    }
+
     static void Help(Red::Optional<int32_t> number, Red::Optional<bool> forceLog) {}
-    static void SetPrintingStyle(bool isEnabled) {}
+    inline static void SetPrintingStyle(bool isEnabled) {}
 
-    static Red::CString GetVersion(const Red::CString& fileNameOrPath);
+    inline static Red::CString GetVersion(const Red::CString& fileNameOrPath)
+    {
+        return GameModules::GetVersion(fileNameOrPath);
+    }
 
-    static void PrintAttribute(const Red::CString& fileNameOrPath, const Red::CString& attribute,
+    inline static void PrintAttribute(const Red::CString& fileNameOrPath, const Red::CString& attribute,
                                Red::Optional<bool> forceLog) {}
-    static void PrintExport(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
-    static void PrintImport(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
-    static void PrintIsLoaded(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
-    static void PrintLoadedModules(Red::Optional<bool> forceLog){}
-    static void PrintTimeDateStamp(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
-    static void PrintVersion(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
+    inline static void PrintExport(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
+    inline static void PrintImport(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
+    inline static void PrintIsLoaded(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
+    inline static void PrintLoadedModules(Red::Optional<bool> forceLog){}
+    inline static void PrintTimeDateStamp(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
+    inline static void PrintVersion(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
 
     RTTI_IMPL_TYPEINFO(CyberlibsCore::Cyberlibs);
     RTTI_IMPL_ALLOCATOR();
 };
 } // namespace CyberlibsCore
 
-RTTI_DEFINE_CLASS(CyberlibsCore::Cyberlibs, {
+RTTI_DEFINE_CLASS(CyberlibsCore::Cyberlibs,
+{
     RTTI_ALIAS("CyberlibsCore.Cyberlibs");
 
     RTTI_METHOD(Help);

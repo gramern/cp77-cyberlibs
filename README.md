@@ -4,10 +4,10 @@ A RED4ext plugin for Cyberpunk 2077 for diagnostics and inspection of libraries 
 
 ## Features
 
-### GameModule
+### GameModules
 Adds methods that can be called from other mods or CET's console:
-- `GameModule.IsLoaded(string fileNameOrPath)`:  Get a boolean indicating whether a module is loaded by the game
-- `GameModule.GetVersion(string fileNameOrPath)`: Get the version of a module as a string
+- `GameModules.IsLoaded(string fileNameOrPath)`:  Get a boolean indicating whether a module is loaded by the game
+- `GameModules.GetVersion(string fileNameOrPath)`: Get the version of a module as a string
 
 ...and others, both implemented already and planned. Build the project, install it and type `Cyberlibs.Help()` in CET's console for help. The project is a WIP.
 
