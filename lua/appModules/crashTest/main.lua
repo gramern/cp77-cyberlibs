@@ -6,6 +6,9 @@ local tables = require("globals/tables")
 local utils = require("globals/utils")
 
 local isRandomSeed = false
+local elementsToPick = 50
+local interval = 1
+
 local min, random = math.min, math.random
 local insert, remove = table.insert, table.remove
 
@@ -16,7 +19,6 @@ end
 local function executeCrashTest()
     local loadedModules = app.getLoadedModules()
     local lodadedNumber = #loadedModules
-    local elementsNumber = 50
     local filePath
     local moduleData = {}
 
@@ -46,7 +48,7 @@ local function executeCrashTest()
         end
     end
 
-    local pickedNumber = min(elementsNumber, lodadedNumber)
+    local pickedNumber = min(elementsToPick - 1, lodadedNumber)
     local picked = {}
 
     for i = 1, pickedNumber do
@@ -74,8 +76,8 @@ local function executeCrashTest()
     end
 
     logger.debug(pickedNumber, tables.tableToString(picked, true))
-    ImGuiExt.SetNotification(0.8, "Crash Test In Progress...", true, ImVec2.new(40, 40))
-    utils.setDelay(1, "crashTest", executeCrashTest)
+    ImGuiExt.SetNotification(interval - 0.2, "Crash Test In Progress...", false, ImVec2.new(40, 40))
+    utils.setDelay(interval, "crashTest", executeCrashTest)
 end
 
 local function initializeCrashTest()
@@ -87,7 +89,7 @@ local function initializeCrashTest()
 
     if isCrashTest() then return end
     ImGuiExt.SetNotification(3, "Crash Testing Initialized")
-    utils.setDelay(1, "crashTest", executeCrashTest)
+    utils.setDelay(interval, "crashTest", executeCrashTest)
 end
 
 local function stopCrashTest()
@@ -99,8 +101,24 @@ end
 local function draw()
     local contentRegionAvailX = ImGui.GetContentRegionAvail()
 
-    ImGui.Dummy(100, 30 * ImGuiExt.GetResolutionFactor())
-    ImGuiExt.AlignNextItemToCenter(300, contentRegionAvailX)
+    ImGui.Spacing()
+    ImGui.SetNextItemWidth(150)
+
+    elementsToPick = ImGui.SliderFloat("##Number of modules to parse on each tick", elementsToPick, 1, 200, "%.0f")
+
+    ImGuiExt.SetTooltip("1 = parse \"Cyberpunk2077.exe\" only")
+    ImGui.SameLine()
+    ImGuiExt.TextAlt("Number of modules to parse on each tick")
+    ImGui.SetNextItemWidth(150)
+
+    interval = ImGui.SliderFloat("##Tick duration", interval, 0.5, 2, "%.1f")
+
+    ImGui.SameLine()
+    ImGuiExt.TextAlt("Tick duration (s)")
+    ImGui.Spacing()
+    ImGui.Spacing()
+
+    ImGuiExt.AlignNextItemToRight(300 - ImGui.GetStyle().ItemSpacing.x, contentRegionAvailX)
 
     if not isCrashTest() then
         if ImGui.Button("Start Crash Test", 300, 0) then
@@ -109,8 +127,14 @@ local function draw()
 
         ImGui.Text("")
 
-        local text = "Crash test generates heavy prints to logs when debug mode is turned ON"
+        local text = "The test may cause noticeable game lag."
         local textWidth = ImGui.CalcTextSize(text)
+
+        ImGuiExt.AlignNextItemToCenter(textWidth, contentRegionAvailX)
+        ImGuiExt.TextAlt(text)
+
+        text = "Crash test generates heavy prints to logs when the app's debug mode is turned ON."
+        textWidth = ImGui.CalcTextSize(text)
 
         ImGuiExt.AlignNextItemToCenter(textWidth, contentRegionAvailX)
         ImGuiExt.TextAlt(text)
@@ -128,12 +152,13 @@ local function draw()
         ImGuiExt.TextAlt(text)
     end
 
-    ImGui.Dummy(100, 30 * ImGuiExt.GetResolutionFactor())
+    ImGui.Spacing()
 end
 
 return {
     __NAME = "Crash Test",
     __VERSION = { 0, 2, 0},
+    __TITLE = "Loaded Modules Heavy Parsing Crash Test",
     draw = draw,
     inputs = {
         { id = "intializeCrashTest", description = "Initalize Crash Testting", keyPressCallback = initializeCrashTest },

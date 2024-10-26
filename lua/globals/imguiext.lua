@@ -217,7 +217,7 @@ end
 ---@param padding number?
 ---@param horizontalScaling boolean?
 function ImGuiExt.AlignNextItemToRight(itemWidth, regionWidth, padding, horizontalScaling)
-    padding = padding or ImGui.GetStyle().WindowPadding.x
+    padding = padding or 0
     local scaling = horizontalScaling and var.scaleFactor or 1
     local startX = regionWidth - (itemWidth * scaling) - padding
     ImGui.SetCursorPosX(startX)
@@ -422,13 +422,17 @@ end
 function ImGuiExt.Notification()
     if var.notification.active then
         local posX, posY
-
+        local style = ImGui.GetStyle()
+        local padding = style.WindowPadding
+        
         if not var.notification.screenPos then
             var.notification.textWidth = ImGui.CalcTextSize(var.notification.text)
-            posX = var.screen.width / 2 - var.notification.textWidth / 2 - 2 * ImGui.GetStyle().ItemSpacing.x
-            posY = var.screen.height / 2
+            local totalWidth = var.notification.textWidth + 2 * padding.x
+            local totalHeight = ImGui.GetTextLineHeight() + 2 * padding.y
+            posX = var.screen.width / 2 - totalWidth / 2
+            posY = var.screen.height / 2 - totalHeight / 2
         else
-            posX = var.notification.screenPos.y
+            posX = var.notification.screenPos.x
             posY = var.notification.screenPos.y
         end
 
@@ -962,6 +966,7 @@ function ImGuiExt.onInit(themeName, statusBarFallbackText)
     setStatusBarFallback(statusBarFallbackText)
     ImGuiExt.ResetStatusBar()
     ImGuiExt.SetActiveTheme(themeName)
+    setupScreen()
 end
 
 function ImGuiExt.onOverlayOpen()
