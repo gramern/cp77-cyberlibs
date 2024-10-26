@@ -21,6 +21,7 @@
   "Lua.diagnostics.globals": [
     "json",
     "GameModules",
+    "GameDiagnostics",
     "Game.GetSystemRequestsHandler"
   ],
   "Lua.diagnostics.disable": [

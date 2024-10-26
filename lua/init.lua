@@ -94,7 +94,6 @@ local function verifyAppModule(path)
     local moduleFile = loadfile(path)(appApi)
 
     if moduleFile.__NAME and
-        moduleFile.__TITLE and
         moduleFile.draw and
         type(moduleFile.draw) == "function" then
 
@@ -203,7 +202,7 @@ local tabHelp = {
 
 local function initializeModSettings()
     local appSettings = {
-        stylizePrints = false,
+        stylizePrints = true,
         tooltips = true,
         tabBarDropdown = false,
         tabCloseOnMiddleButtonClick = false
@@ -657,7 +656,7 @@ local function drawRootWindow()
                                                     windowWidth - (windowPadding.x * 2) - itemSpacing.x - dotsWidth - 12)
 
         if ImGuiExt.IsSearchInputTyped(activeFilter.label) then
-            utils.SetDelay(1, "RootWindow.SearchInput", search.setFiltering, false)
+            utils.setDelay(1, "RootWindow.SearchInput", search.setFiltering, false)
         end
 
         ImGui.SameLine()
@@ -692,19 +691,15 @@ registerPublicApi()
 registerAppModulesApi()
 registerAppModules()
 registerAppModulesInputs()
+initializeModSettings()
 
 registerForEvent("onInit", function()
     logger.setModName(Cyberlibs.__NAME)
-
     publicApi.onInit()
     settings.onInit()
     logger.setDebug(settings.getModSetting("debugMode"))
     style.setEnabled(settings.getModSetting("stylizePrints"))
-
-
-
     ImGuiExt.onInit(settings.getModSetting("windowTheme"), Cyberlibs.Version())
-    initializeModSettings()
     fireAppModulesEvents("onInit")
 end)
 

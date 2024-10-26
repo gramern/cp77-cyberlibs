@@ -1,22 +1,5 @@
 #include "GameDiagnostics.hpp"
 
-bool CyberlibsCore::GameDiagnostics::CreateDiagnosticsSubDir(const Red::CString& relativePath)
-{
-    try
-    {
-        auto path = getOutputPath(relativePath);
-        if (path.empty())
-        {
-            return false;
-        }
-        return ensureDirectoryExists(path);
-    }
-    catch (const std::exception&)
-    {
-        return false;
-    }
-}
-
 Red::CString CyberlibsCore::GameDiagnostics::GetGamePath()
 {
     wchar_t path[MAX_PATH];
@@ -90,10 +73,17 @@ bool CyberlibsCore::GameDiagnostics::IsDirectory(const Red::CString& relativePat
 bool CyberlibsCore::GameDiagnostics::WriteToOutput(const Red::CString& relativeFilePath, const Red::CString& content,
                                                    Red::Optional<bool> append)
 {
-    constexpr size_t MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
+    constexpr size_t MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
 
     try
     {
+        const std::string_view path(relativeFilePath.c_str());
+        if (path.find('/') == std::string_view::npos && path.find('\\') == std::string_view::npos)
+        {
+            return false;
+        }
+
+
         std::filesystem::path fullPath = getOutputPath(relativeFilePath);
         if (fullPath.empty())
         {

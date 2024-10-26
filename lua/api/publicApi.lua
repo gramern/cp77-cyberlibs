@@ -30,13 +30,12 @@ end
 
 local function printHelpTopics(t, forceLog)
     for i, v in ipairs(t) do
-        style.formatEntry(forceLog, i, v)
+        logger.custom(false, forceLog, 0, style.formatEntry(i .. " " .. v))
     end
 end
 
 function publicApi.Help(query, forceLog)
     local help = require("knowledgeBase/help")
-    local isStyle = style.isEnabled()
     local isTopic, itemType
 
     if not query or query == 0 then
@@ -53,10 +52,10 @@ function publicApi.Help(query, forceLog)
             itemType = "table"
         end
 
-        style.formatHeader("HELP FILES", forceLog)
+        logger.custom(false, forceLog, 0, style.formatHeader("HELP FILES"))
     else
-        style.formatFailHeader("HELP FILES", forceLog)
-        logger.custom(isStyle, forceLog, 1, ' Type Cyberlibs.Help() to start ')
+        logger.custom(false, forceLog, 0, style.formatFailHeader("HELP FILES"))
+        logger.custom(false, forceLog, 1, ' Type Cyberlibs.Help() to start ')
     
         return
     end
@@ -75,27 +74,27 @@ function publicApi.Help(query, forceLog)
                 itemsNumber = #lines
 
                 for _, line in ipairs(lines) do
-                    style.formatEntry(forceLog, line)
+                    logger.custom(false, forceLog, 0, style.formatEntry(line))
                 end
             else
                 itemsNumber = 1
 
-                style.formatEntry(forceLog, v)
+                logger.custom(false, forceLog, 0, style.formatEntry(v))
             end
         end
     else
-        printHelpTopics(contents, forceLog)
+        printHelpTopics(contents, false, forceLog)
     end
 
-    style.formatFooter(itemsNumber, forceLog)
-    logger.custom(isStyle, forceLog, 0, "")
+    logger.custom(false, forceLog, 0, style.formatFooter(itemsNumber))
+    logger.custom(false, forceLog, 0, "")
 
     if not isTopic then
-        logger.custom(isStyle, forceLog, 1, " File not found in databank. ")
-        logger.custom(isStyle, forceLog, 1, ' Type Cyberlibs.Help() to return ')
+        logger.custom(false, forceLog, 1, " File not found in databank. ")
+        logger.custom(false, forceLog, 1, ' Type Cyberlibs.Help() to return ')
     end
 
-    logger.custom(isStyle, forceLog, 1, ' Type Cyberlibs.Help(number) to open file ')
+    logger.custom(false, forceLog, 1, ' Type Cyberlibs.Help(number) to open file ')
 end
 
 function publicApi.GetVersion(fileNameOrPath)
@@ -136,18 +135,18 @@ function publicApi.PrintAttribute(fileNameOrPath, attribute, forceLog)
     }
 
     if attributes[attribute] ~= nil then
-        logger.custom(style.isEnabled(), forceLog, 0, attributes[attribute]())
+        logger.custom(false, forceLog, 0, attributes[attribute]())
     elseif arrays[attribute] ~= nil then
         arrays[attribute]()
     else
-        logger.custom(style.isEnabled(), false, 1, " Attribute not found in databank. ")
+        logger.custom(false, false, 1, " Attribute not found in databank. ")
     end
 end
 
 function publicApi.PrintExport(fileNameOrPath, forceLog)
 
     if not GameModules.IsLoaded(fileNameOrPath) then
-        logger.custom(style.isEnabled(), false, 1, " Module not found in databank. ")
+        logger.custom(false, false, 1, " Module not found in databank. ")
 
         return
     end
@@ -160,8 +159,8 @@ function publicApi.PrintExport(fileNameOrPath, forceLog)
         return
     end
 
-    style.formatHeader("EXPORTS", forceLog)
-    style.formatEntry(forceLog, "TARGET MODULE:", fileNameOrPath)
+    logger.custom(false, forceLog, 0, style.formatHeader("EXPORTS"))
+    logger.custom(false, forceLog, 0, style.formatEntry("TARGET MODULE:"))
 
     local forwarder
 
@@ -172,16 +171,17 @@ function publicApi.PrintExport(fileNameOrPath, forceLog)
             forwarder = "Forwarder: " .. export.forwarderName
         end
 
-        style.formatEntry(forceLog, "Entry", tostring(i) .. ":", export.entry, "Ordinal:", export.ordinal, "RVA:", export.rva, forwarder)
+        logger.custom(false, forceLog, 0, style.formatEntry("Entry" .. tostring(i) .. ": " .. export.entry ..
+                        "Ordinal: " .. export.ordinal .. "RVA: " .. export.rva .. forwarder))
     end
 
-    style.formatFooter(#exportArray, forceLog)
+    logger.custom(false, forceLog, 0, style.formatFooter(#exportArray))
 end
 
 function publicApi.PrintImport(fileNameOrPath, forceLog)
 
     if not GameModules.IsLoaded(fileNameOrPath) then
-        logger.custom(style.isEnabled(), false, 1, " Module not found in databank. ")
+        logger.custom(false, false, 1, " Module not found in databank. ")
 
         return
     end
@@ -194,21 +194,21 @@ function publicApi.PrintImport(fileNameOrPath, forceLog)
         return
     end
 
-    style.formatHeader("IMPORTS", forceLog)
-    style.formatEntry(forceLog, "TARGET MODULE:", fileNameOrPath)
+    logger.custom(false, forceLog, 0, style.formatHeader("IMPORTS"))
+    logger.custom(false, forceLog, 0, style.formatEntry("TARGET MODULE:" .. fileNameOrPath))
 
     for i, import in ipairs(importArray) do
-        style.formatEntry(forceLog, "+", "Module", tostring(i) .. ":", import.fileName)
+        logger.custom(false, forceLog, 0, style.formatEntry("+ Module" .. tostring(i) .. ": " .. import.fileName))
         for j, entry in ipairs(import.entries) do
-            style.formatEntry(forceLog, "|- Entry", tostring(j) .. ":", entry)
+            logger.custom(false, forceLog, 0, style.formatEntry("|- Entry " .. tostring(j) .. ": " .. entry))
         end
     end
 
-    style.formatFooter(#importArray, forceLog)
+    logger.custom(false, forceLog, 0, style.formatFooter(#importArray))
 end
 
 function publicApi.PrintIsLoaded(fileNameOrPath, forceLog)
-    logger.custom(style.isEnabled(), forceLog, 0, GameModules.IsLoaded(fileNameOrPath))
+    logger.custom(false, forceLog, 0, GameModules.IsLoaded(fileNameOrPath))
 end
 
 function publicApi.PrintLoadedModules(forceLog)
@@ -220,21 +220,21 @@ function publicApi.PrintLoadedModules(forceLog)
         return
     end
 
-    style.formatHeader("LOADED MODULES", forceLog)
+    logger.custom(false, forceLog, 0, style.formatHeader("LOADED MODULES"))
 
     for _, module in ipairs(modulesArray) do
-        logger.custom(style.isEnabled(), forceLog, 0, utils.getFileName(module))
+        logger.custom(false, forceLog, 0, utils.getFileName(module))
     end
 
-    style.formatFooter(#modulesArray, forceLog)
+    logger.custom(false, forceLog, 0, style.formatFooter(#modulesArray))
 end
 
 function publicApi.PrintTimeDateStamp(fileNameOrPath, forceLog)
-    logger.custom(style.isEnabled(), forceLog, 0, GameModules.GetTimeDateStamp(fileNameOrPath))
+    logger.custom(false, forceLog, 0, GameModules.GetTimeDateStamp(fileNameOrPath))
 end
 
 function publicApi.PrintVersion(fileNameOrPath, forceLog)
-    logger.custom(style.isEnabled(), forceLog, 0, GameModules.GetVersion(fileNameOrPath))
+    logger.custom(false, forceLog, 0, GameModules.GetVersion(fileNameOrPath))
 end
 
 function publicApi.onInit()

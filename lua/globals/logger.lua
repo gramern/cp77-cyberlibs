@@ -37,7 +37,7 @@ local function parser(type, ...)
     local contents = {...}
 
     if #contents == 0 then
-        local parsed = bracketizer(var.modName) .. " " .. bracketizer(type) .." " .. "No data found."
+        local parsed = bracketizer(var.modName) .. " " .. bracketizer(type) .." " .. "Nothing to print."
         printer(parsed, true)
 
         return
@@ -87,10 +87,10 @@ function logger.custom(printModName, forceLog, bracketizeParameter, ...)
         end
     end
 
-    local formattedContents = " " .. table.concat(contents, " ")
+    local formattedContents = table.concat(contents, " ")
 
     if printModName then
-        formattedContents = bracketizer(var.modName) .. formattedContents
+        formattedContents = bracketizer(var.modName) .. " " .. formattedContents
     end
 
     printer(false,  forceLog, formattedContents)

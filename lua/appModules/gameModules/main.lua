@@ -139,7 +139,7 @@ local function openModule(onScreenName, fileName, filePath)
         ["Company Name"] = GameModules.GetCompanyName(filePath),
         ["Description"] = GameModules.GetDescription(filePath),
         ["Entry Point"] = GameModules.GetEntryPoint(filePath),
-        ["Export"] = GameModules.GetExport(filePath),
+        ["Export"] = {},
         ["File Name"] = fileName,
         ["File Path"] = filePath,
         ["File Size"] = GameModules.GetFileSize(filePath),
@@ -624,7 +624,7 @@ local function handleFiltering(searchInstanceName, export, import, exportLabel, 
 
             if not widgetState[exportLabel].filtering and not ImGuiExt.IsSearchInputTyped(activeFilter.label) then
                 search.setFiltering(true)
-                utils.SetDelay(1, "RootWindow.SearchInput", search.setFiltering, false)
+                utils.setDelay(1, "RootWindow.SearchInput", search.setFiltering, false)
                 setFiltering(exportLabel, true)
             end
 
@@ -638,7 +638,7 @@ local function handleFiltering(searchInstanceName, export, import, exportLabel, 
 
             if not widgetState[importLabel].filtering and not ImGuiExt.IsSearchInputTyped(activeFilter.label) then
                 search.setFiltering(true)
-                utils.SetDelay(1, "RootWindow.SearchInput", search.setFiltering, false)
+                utils.setDelay(1, "RootWindow.SearchInput", search.setFiltering, false)
                 setFiltering(importLabel, true)
                 local openNodesCharThershold = widgetState.__global.importNodesCharThreshold()
 
@@ -1122,7 +1122,6 @@ return {
     __NAME = "Game Modules",
     __ICON = IconGlyphs.Bookshelf,
     __VERSION = { 0, 2, 0},
-    __TITLE = "",
     appApi = {
         categorizeLoadedModules = categorizeLoadedModules,
         getLoadedModules = getLoadedModules
@@ -1131,3 +1130,22 @@ return {
     drawSettings = drawSettings,
     events = events
 }
+
+-- return {
+--     __NAME = "Exemplary AppModule", -- required
+--     __ICON = IconGlyphs.Bookshelf, -- optional
+--     __VERSION = { 0, 1, 0}, -- optional
+--     __TITLE = "Tab Title", -- optional
+--     appApi = {
+--         privateFunction = privateFunction
+--     }, -- optional
+--     publicApi = {
+--         exposedFunction = exposedFunction,
+--     }, -- optional
+--     draw = draw, -- required
+--     drawSettings = drawSettings, -- optional
+--     events = {}, -- optional, functions named: onInit, onOverlayOpen, onOverlayClose, onUpdate, onDraw
+--     inputs = {
+--         { id = "exampleInput", description = "Describe Action", keyPressCallback = functionOnKeyPress, keyReleaseCallback = functionOnKeyRelease },
+--     } -- optional
+-- }

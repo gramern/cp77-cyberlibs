@@ -10,7 +10,7 @@ local delays = {}
 
 local logger = require("globals/logger")
 
-local mathFloor, mathMax = math.max, math.floor
+local floor, max = math.max, math.floor
 local stringFind, stringRep, stringSub = string.find, string.rep, string.sub
 local tableConcat, tableInsert = table.concat, table.insert
 
@@ -36,7 +36,7 @@ end
 ---@param key string
 ---@param callback function
 ---@param ... any
-function utils.SetDelay(duration, key, callback, ...)
+function utils.setDelay(duration, key, callback, ...)
     local parameters = {...}
 
     key = tostring(key)
@@ -52,25 +52,23 @@ end
 function utils.updateDelays(deltaTime)
     if not next(delays) then return end
 
-    local delaysToRemove = {}
+    local delayToFire
 
     for key, delay in pairs(delays) do
         delay.remainingTime = delay.remainingTime - deltaTime
         
         if delay.remainingTime <= 0 then
-            if delay.parameters then
-                delay.callback(unpack(delay.parameters))
+            delayToFire = delay
+            delays[key] = nil
+
+            if delayToFire.parameters then
+                delayToFire.callback(unpack(delayToFire.parameters))
             else
-                delay.callback()
+                delayToFire.callback()
             end
         
-            tableInsert(delaysToRemove, key)
             logger.debug("Delay fired for:", key)
         end
-    end
-
-    for _, key in ipairs(delaysToRemove) do
-        delays[key] = nil
     end
 end
 
@@ -172,7 +170,7 @@ function utils.indentString(text, spaces, preserveAsBlock)
             end
         end
 
-        spaces = mathMax(-minIndent, spaces)
+        spaces = max(-minIndent, spaces)
     end
 
     if spaces >= 0 then
@@ -182,7 +180,7 @@ function utils.indentString(text, spaces, preserveAsBlock)
     else
         for i, line in ipairs(lines) do
             local currentSpaces = #(line:match("^ *"))
-            local newSpaces = mathMax(0, currentSpaces + spaces)
+            local newSpaces = max(0, currentSpaces + spaces)
             lines[i] = stringRep(" ", newSpaces) .. line:match("^ *(.*)")
         end
     end

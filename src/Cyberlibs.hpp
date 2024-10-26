@@ -4,14 +4,14 @@
 #include <RedLib.hpp>
 #include "GameModules.hpp"
 
-namespace CyberlibsCore
+namespace CyberlibsAPI
 {
 class Cyberlibs : Red::IScriptable
 {
 public:
     inline static Red::CString Version()
     {
-        return GameModules::GetVersion("Cyberlibs.dll");
+        return CyberlibsCore::GameModules::GetVersion("Cyberlibs.dll");
     }
 
     static void Help(Red::Optional<int32_t> number, Red::Optional<bool> forceLog) {}
@@ -19,7 +19,7 @@ public:
 
     inline static Red::CString GetVersion(const Red::CString& fileNameOrPath)
     {
-        return GameModules::GetVersion(fileNameOrPath);
+        return CyberlibsCore::GameModules::GetVersion(fileNameOrPath);
     }
 
     inline static void PrintAttribute(const Red::CString& fileNameOrPath, const Red::CString& attribute,
@@ -31,14 +31,14 @@ public:
     inline static void PrintTimeDateStamp(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
     inline static void PrintVersion(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
 
-    RTTI_IMPL_TYPEINFO(CyberlibsCore::Cyberlibs);
+    RTTI_IMPL_TYPEINFO(CyberlibsAPI::Cyberlibs);
     RTTI_IMPL_ALLOCATOR();
 };
-} // namespace CyberlibsCore
+} // namespace CyberlibsAPI
 
-RTTI_DEFINE_CLASS(CyberlibsCore::Cyberlibs,
+RTTI_DEFINE_CLASS(CyberlibsAPI::Cyberlibs,
 {
-    RTTI_ALIAS("CyberlibsCore.Cyberlibs");
+    RTTI_ALIAS("CyberlibsAPI.Cyberlibs");
 
     RTTI_METHOD(Help);
     RTTI_METHOD(Version);

@@ -202,10 +202,10 @@ end
 
 ---@param itemWidth number
 ---@param regionWidth number
----@param padding number
+---@param padding number?
 ---@param horizontalScaling boolean?
 function ImGuiExt.AlignNextItemToCenter(itemWidth, regionWidth, padding, horizontalScaling)
-    padding = padding * 2
+    padding = (padding or ImGui.GetStyle().WindowPadding.x) * 2
     local scaling = horizontalScaling and var.scaleFactor or 1
     local startX = (regionWidth - padding - itemWidth * scaling) * 0.5
     ImGui.SetCursorPosX(startX)
@@ -214,9 +214,10 @@ end
 
 ---@param itemWidth number
 ---@param regionWidth number
----@param padding number
+---@param padding number?
 ---@param horizontalScaling boolean?
 function ImGuiExt.AlignNextItemToRight(itemWidth, regionWidth, padding, horizontalScaling)
+    padding = padding or ImGui.GetStyle().WindowPadding.x
     local scaling = horizontalScaling and var.scaleFactor or 1
     local startX = regionWidth - (itemWidth * scaling) - padding
     ImGui.SetCursorPosX(startX)
@@ -402,20 +403,36 @@ end
 
 ---@param timeSeconds number
 ---@param text string
----@param hideOnGameMenu boolean
-function ImGuiExt.SetNotification(timeSeconds, text, hideOnGameMenu)
+---@param hideOnGameMenu boolean?
+---@param screenPos ImVec2?
+function ImGuiExt.SetNotification(timeSeconds, text, hideOnGameMenu, screenPos)
     ShowNotification(true)
     var.notification.text = text
     var.notification.hideOnGameMenu = hideOnGameMenu
+
+    if screenPos and screenPos.x and screenPos.y then
+        var.notification.screenPos = screenPos
+    else
+        var.notification.screenPos = nil
+    end
 
     utils.setDelay(timeSeconds, "Notification", ShowNotification, false)
 end
 
 function ImGuiExt.Notification()
     if var.notification.active then
-        var.notification.textWidth = ImGui.CalcTextSize(var.notification.text)
-        ImGui.SetNextWindowPos(var.screen.width / 2 - var.notification.textWidth / 2 - 2 * ImGui.GetStyle().ItemSpacing.x,
-                                                        var.screen.height / 2)
+        local posX, posY
+
+        if not var.notification.screenPos then
+            var.notification.textWidth = ImGui.CalcTextSize(var.notification.text)
+            posX = var.screen.width / 2 - var.notification.textWidth / 2 - 2 * ImGui.GetStyle().ItemSpacing.x
+            posY = var.screen.height / 2
+        else
+            posX = var.notification.screenPos.y
+            posY = var.notification.screenPos.y
+        end
+
+        ImGui.SetNextWindowPos(posX, posY)
         ImGui.Begin("Notification", true, ImGuiWindowFlags.AlwaysAutoResize + ImGuiWindowFlags.NoTitleBar)
         ImGuiExt.TextAlt(var.notification.text)
         ImGui.End()

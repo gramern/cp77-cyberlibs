@@ -2,68 +2,79 @@ local style = {
     __VERSION = { 0, 2, 0 },
 }
 
-local logger = require("globals/logger")
-
-local var = {
-    stylize = true,
-}
+local isStyle = true
 
 ---@param title string
----@param forceLog boolean
-function style.formatHeader(title, forceLog)
-    if style.isEnabled() then
-        logger.custom(true, forceLog, 0, "|----------------------------------------------------------------------------------")
-        logger.custom(true, forceLog, 0, "| DATA EXTRACTION: " .. string.upper(title))
-        logger.custom(true, forceLog, 0, "|----------------------------------------------------------------------------------")
+---@return string
+function style.formatHeader(title)
+    local header
+
+    if isStyle then
+        header = "|----------------------------------------------------------------------------------" ..
+                    "\n| DATA EXTRACTION: " .. string.upper(title) ..
+                    "\n|----------------------------------------------------------------------------------"
     else
-        logger.custom(false, forceLog, 0, title)
-        logger.custom(false, forceLog, 0, "----------------------------------------------------------------------------------")
+        header = title ..
+                    "\n----------------------------------------------------------------------------------"
     end
+
+    return header
 end
 
----@param forceLog boolean
----@param ... any
-function style.formatEntry(forceLog, ...)
-    if style.isEnabled() then
-        logger.custom(true, forceLog, 0, "|", ...)
+---@param text string
+---@return string
+function style.formatEntry(text)
+    local entry
+
+    if isStyle then
+        entry = "| " .. text
     else
-        logger.custom(false, forceLog, 0, ...)
+        entry = text
     end
+
+    return entry
 end
 
 ---@param itemsNumber number
----@param forceLog boolean
-function style.formatFooter(itemsNumber, forceLog)
-    if style.isEnabled() then
-        logger.custom(true, forceLog, 0, "|----------------------------------------------------------------------------------")
-        logger.custom(true, forceLog, 1, " DATA EXTRACTION COMPLETE ")
-        logger.custom(true, forceLog, 1, string.format(" Extracted %d data packets ", itemsNumber))
+---@return string
+function style.formatFooter(itemsNumber)
+    local footer
+
+    if isStyle then
+        footer = "|----------------------------------------------------------------------------------" ..
+                    "\n[ DATA EXTRACTION COMPLETE ]\n" ..
+                    string.format("[ Extracted %d data packets. ]", itemsNumber)
     else
-        logger.custom(false, forceLog, 0, "Items:", itemsNumber)
+        footer = "Items: " .. itemsNumber
     end
+
+    return footer
 end
 
 ---@param title string
----@param forceLog boolean
-function style.formatFailHeader(title, forceLog)
-    if style.isEnabled() then
-        logger.custom(true, forceLog, 0, "|----------------------------------------------------------------------------------")
-        logger.custom(true, forceLog, 0, "| DATA EXTRACTION FAILED: " .. string.upper(title))
-        logger.custom(true, forceLog, 0, "|----------------------------------------------------------------------------------")
-        logger.custom(true, forceLog, 1, " No data found in memory. Initialize databank first. ")
+function style.formatFailHeader(title)
+    local header
+
+    if isStyle then
+        header = "|----------------------------------------------------------------------------------" ..
+                    "\n| DATA EXTRACTION FAILED: " .. string.upper(title) ..
+                    "\n|----------------------------------------------------------------------------------" ..
+                    "\n[ No data found in memory. ]"
     else
-        logger.custom(false, forceLog, 0, "Failed to print.")
+        header = "Nothing to print."
     end
+
+    return header
 end
 
 ---@param isEnabled boolean
 function style.setEnabled(isEnabled)
-    var.stylize = isEnabled
+    isStyle = isEnabled
 end
 
 ---@return boolean
 function style.isEnabled()
-    return var.stylize
+    return isStyle
 end
 
 return style
