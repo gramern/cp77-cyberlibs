@@ -3,7 +3,7 @@
 -- (c) gramern 2024
 
 local tables = {
-    __VERSION = { 0, 2, 0 },
+    __VERSION = { 0, 3, 0 },
 }
 
 ---@param contents table

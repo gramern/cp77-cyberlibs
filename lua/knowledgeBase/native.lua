@@ -1,6 +1,4 @@
-local native = {
-    __VERSION = { 0, 2, 0 },
-}
+local native = {}
 
 local t = nil
 

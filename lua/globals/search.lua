@@ -3,7 +3,7 @@
 -- (c) gramern 2024
 
 local search = {
-    __VERSION = { 0, 2, 0 },
+    __VERSION = { 0, 3, 0 },
 }
 
 local tables = require("globals/tables")

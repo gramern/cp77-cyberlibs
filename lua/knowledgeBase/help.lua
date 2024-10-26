@@ -1,6 +1,4 @@
-local help = {
-    __VERSION = { 0, 2, 0 },
-}
+local help = {}
 
 local t = nil
 

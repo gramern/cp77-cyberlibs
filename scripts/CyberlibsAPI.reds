@@ -1,4 +1,4 @@
-// Cyberlibs 0.2.0.0
+// Cyberlibs 0.2.0
 module CyberlibsAPI
 
 public native class Cyberlibs {

@@ -1,6 +1,4 @@
-local modsResources = {
-    __VERSION = { 0, 2, 0 },
-}
+local modsResources = {}
 
 local t = nil
 

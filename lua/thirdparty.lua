@@ -1,5 +1,4 @@
 local thirdparty = {
-    __VERSION = { 0, 2, 0 },
     __LICENSES =
         [[
         # THIRD PARTY LICENSES

@@ -1,6 +1,4 @@
-local redmod = {
-    __VERSION = { 0, 2, 0 },
-}
+local redmod = {}
 
 local t = nil
 

@@ -1,4 +1,4 @@
-// Cyberlibs 0.2.0.0
+// Cyberlibs 0.2.0
 module CyberlibsCore
 
 public native class GameDiagnostics {

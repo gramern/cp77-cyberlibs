@@ -1,6 +1,4 @@
-local style = {
-    __VERSION = { 0, 2, 0 },
-}
+local style = {}
 
 local isStyle = true
 
