@@ -1121,7 +1121,6 @@ end
 return {
     __NAME = "Game Modules",
     __ICON = IconGlyphs.Bookshelf,
-    __VERSION = { 0, 2, 0},
     appApi = {
         categorizeLoadedModules = categorizeLoadedModules,
         getLoadedModules = getLoadedModules

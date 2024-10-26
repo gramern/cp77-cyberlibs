@@ -118,7 +118,7 @@ local function draw()
     ImGui.Spacing()
     ImGui.Spacing()
 
-    ImGuiExt.AlignNextItemToRight(300 - ImGui.GetStyle().ItemSpacing.x, contentRegionAvailX)
+    ImGuiExt.AlignNextItemToRight(300, contentRegionAvailX)
 
     if not isCrashTest() then
         if ImGui.Button("Start Crash Test", 300, 0) then
@@ -157,7 +157,6 @@ end
 
 return {
     __NAME = "Crash Test",
-    __VERSION = { 0, 2, 0},
     __TITLE = "Loaded Modules Heavy Parsing Crash Test",
     draw = draw,
     inputs = {

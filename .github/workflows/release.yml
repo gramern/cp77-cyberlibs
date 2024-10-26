@@ -1,0 +1,127 @@
+name: Release Workflow
+on:
+  push:
+    tags:
+      - v*.*.*
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release ${{ github.ref_name }}
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Create environment variables
+        run: |
+          $prefix = "refs/tags/v"
+          $version = $env:GITHUB_REF.Substring($prefix.Length)
+          echo "VERSION=${version}" | Out-File -FilePath $env:GITHUB_ENV -Encoding UTF8 -Append
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        working-directory: ${{github.workspace}}/build
+        run: cmake ${{ github.workspace }} -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: cmake --build . --config Release
+
+      - name: Prepare Cyberlibs ZIP
+        working-directory: build
+        run: |
+          $packagingDir = "./_packaging_core"
+          
+          # Create dirs
+          New-Item -ItemType directory -Path "$packagingDir/red4ext/plugins/Cyberlibs" -Force
+          New-Item -ItemType directory -Path "$packagingDir/r6/scripts" -Force
+          
+          # Copy
+          Copy-Item -Path "Release/Cyberlibs.dll" -Destination "$packagingDir/red4ext/plugins/Cyberlibs/"
+          Copy-Item -Path "../LICENSE" -Destination "$packagingDir/red4ext/plugins/Cyberlibs/LICENSE.md"
+          Copy-Item -Path "../THIRD_PARTY_LICENSES.md" -Destination "$packagingDir/red4ext/plugins/Cyberlibs/"
+          Copy-Item -Path "../scripts/CyberlibsCore.reds" -Destination "$packagingDir/r6/scripts/"
+          
+          # Create ZIP
+          7z a "Cyberlibs-v${env:VERSION}.zip" "$packagingDir/*"
+
+      - name: Prepare CyberlibsApp ZIP
+        working-directory: build
+        run: |
+          $packagingDir = "./_packaging_app"
+          
+          # Create dirs
+          New-Item -ItemType directory -Path "$packagingDir/bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs" -Force
+          New-Item -ItemType directory -Path "$packagingDir/r6/scripts" -Force
+          
+          # Copy (exclude crashTest)
+          $luaSourceDir = "../lua"
+          Get-ChildItem -Path $luaSourceDir -Exclude "appModules" | Copy-Item -Destination "$packagingDir/bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs" -Recurse
+
+          if (Test-Path "$luaSourceDir/appModules") {
+            New-Item -ItemType directory -Path "$packagingDir/bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs/appModules" -Force
+            Get-ChildItem -Path "$luaSourceDir/appModules" -Directory -Exclude "crashTest" | ForEach-Object {
+              $targetPath = "$packagingDir/bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs/appModules/$($_.Name)"
+              Copy-Item -Path $_.FullName -Destination $targetPath -Recurse
+            }
+          }
+
+          Copy-Item -Path "../scripts/CyberlibsAPI.reds" -Destination "$packagingDir/r6/scripts/"
+          
+          # Create ZIP
+          7z a "CyberlibsApp-v${env:VERSION}.zip" "$packagingDir/*"
+
+      - name: Prepare CyberlibsApp-CrashTestAppModule ZIP
+        working-directory: build
+        run: |
+          $packagingDir = "./_packaging_crash"
+          
+          # Create dir
+          New-Item -ItemType directory -Path "$packagingDir/bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs/appModules/crashTest" -Force
+          
+          # Copy
+          Copy-Item -Path "../lua/appModules/crashTest/*" -Destination "$packagingDir/bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs/appModules/crashTest" -Recurse
+          
+          # Create ZIP
+          7z a "CyberlibsApp-CrashTestAppModule-v${env:VERSION}.zip" "$packagingDir/*"
+
+      - name: Generate hashes
+        working-directory: build
+        run: |
+          $files = @(
+            "Cyberlibs-v${env:VERSION}.zip",
+            "CyberlibsApp-v${env:VERSION}.zip",
+            "CyberlibsApp-CrashTestAppModule-v${env:VERSION}.zip"
+          )
+          
+          $hashes = ""
+          foreach ($file in $files) {
+            $hash = Get-FileHash -Algorithm SHA256 -Path $file
+            $hash | Format-List
+            $hashes += "- $file`n  - $($hash.Hash)`n"
+          }
+          
+          echo "HASHES<<EOF" | Out-File -FilePath $env:GITHUB_ENV -Encoding UTF8 -Append
+          echo "$hashes" | Out-File -FilePath $env:GITHUB_ENV -Encoding UTF8 -Append
+          echo "EOF" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2.0.1
+        with:
+          append_body: true
+          body: |
+            ### SHA256
+
+            ${{ env.HASHES }}
+          files: |
+            build/Cyberlibs-v${{ env.VERSION }}.zip
+            build/CyberlibsApp-v${{ env.VERSION }}.zip
+            build/CyberlibsApp-CrashTestAppModule-v${{ env.VERSION }}.zip

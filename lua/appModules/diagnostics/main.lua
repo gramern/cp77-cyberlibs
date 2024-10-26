@@ -57,7 +57,6 @@ end
 return {
     __NAME = "Diagnostics",
     __ICON = IconGlyphs.Stethoscope,
-    __VERSION = { 0, 2, 0},
     draw = draw,
     inputs = {
         { id = "dumpLoadedMods", description = "Dump Loaded Mods Modules", keyPressCallback = dumpLoadedMods },

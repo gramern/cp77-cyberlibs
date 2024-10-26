@@ -205,11 +205,12 @@ end
 ---@param padding number?
 ---@param horizontalScaling boolean?
 function ImGuiExt.AlignNextItemToCenter(itemWidth, regionWidth, padding, horizontalScaling)
-    padding = (padding or ImGui.GetStyle().WindowPadding.x) * 2
+    local padding = (padding or ImGui.GetStyle().ItemSpacing.x) * 2
     local scaling = horizontalScaling and var.scaleFactor or 1
-    local startX = (regionWidth - padding - itemWidth * scaling) * 0.5
+    local scaledItemWidth = itemWidth * scaling
+    local startX = (regionWidth - padding - scaledItemWidth) * 0.5 + padding
     ImGui.SetCursorPosX(startX)
-    ImGui.SetNextItemWidth(itemWidth * scaling)
+    ImGui.SetNextItemWidth(scaledItemWidth)
 end
 
 ---@param itemWidth number
@@ -217,11 +218,12 @@ end
 ---@param padding number?
 ---@param horizontalScaling boolean?
 function ImGuiExt.AlignNextItemToRight(itemWidth, regionWidth, padding, horizontalScaling)
-    padding = padding or 0
+    padding = (padding or 0) - ImGui.GetStyle().ItemSpacing.x
     local scaling = horizontalScaling and var.scaleFactor or 1
-    local startX = regionWidth - (itemWidth * scaling) - padding
+    local scaledItemWidth = itemWidth * scaling
+    local startX = regionWidth - scaledItemWidth - padding
     ImGui.SetCursorPosX(startX)
-    ImGui.SetNextItemWidth(itemWidth * scaling)
+    ImGui.SetNextItemWidth(scaledItemWidth)
 end
 
 ------------------
