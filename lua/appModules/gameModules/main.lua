@@ -29,15 +29,6 @@ local widgetState = {
         end,
     }
 }
-local function isNativeModule(filePath, nativeSet)
-    for nativePath in pairs(nativeSet) do
-        if filePath:sub(-#nativePath) == nativePath then
-            return true
-        end
-    end
-
-    return false
-end
 
 local function intializeCategoriesCount()
     modules.count = {
@@ -50,7 +41,27 @@ local function intializeCategoriesCount()
     }
 end
 
-local function categorizeLoadedModules(loadedModules)
+local function isModsResource(normalizedPath, modsResourcesSet)
+    for resourcePath in pairs(modsResourcesSet) do
+        if normalizedPath:sub(-#resourcePath) == resourcePath then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function isNativeModule(normalizedPath, nativeSet)
+    for nativePath in pairs(nativeSet) do
+        if normalizedPath:sub(-#nativePath) == nativePath then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function categorizeModules(loadedModules)
     local modsResourcesTable = modsResources.getTable()
     local nativeTable = native.getTable()
     local redmodTable = redmod.getTable()
@@ -62,23 +73,26 @@ local function categorizeLoadedModules(loadedModules)
 
     modules.count.all = #loadedModules
 
-    for _, v in ipairs(modsResourcesTable) do modsResourcesSet[v:lower()] = true end
     for _, v in ipairs(nativeTable) do nativeSet[utils.normalizePath(v)] = true end
     for _, v in ipairs(redmodTable) do redmodSet[utils.normalizePath(v)] = true end
+
+    for _, path in pairs(modsResourcesTable) do
+        modsResourcesSet[utils.normalizePath(path):lower()] = true
+    end
   
     for _, module in ipairs(loadedModules) do
-        local lowerFileName = module.fileName:lower()
+        local normalizedPath = module.normalizedPath:lower()
         
         if module.normalizedPath:find("windows") then
             module.category = "system"
             modules.count["system"] = modules.count["system"] + 1
-        elseif isNativeModule(module.normalizedPath, nativeSet) then
+        elseif isNativeModule(normalizedPath, nativeSet) then
             module.category = "native"
             modules.count["native"] = modules.count["native"] + 1
-        elseif isNativeModule(module.normalizedPath, redmodSet) then
+        elseif isNativeModule(normalizedPath, redmodSet) then
             module.category = "redmod"
             modules.count["redmod"] = modules.count["redmod"] + 1
-        elseif modsResourcesSet[lowerFileName] then
+        elseif isModsResource(normalizedPath, modsResourcesSet) then
             module.category = "mods resource"
             modules.count["mods resource"] = modules.count["mods resource"] + 1
         else
@@ -87,12 +101,12 @@ local function categorizeLoadedModules(loadedModules)
         end
     end
     
-    logger.debug(modules.count.all, "modules loaded and categorized.")
+    logger.debug(modules.count.all, "Categorized loaded modules.")
 
     return loadedModules
 end
 
-local function getLoadedModules()
+local function getModules()
     local loadedPaths = GameModules.GetLoadedModules()
     local loadedModules = {}
     local fileNameCount = {}
@@ -117,9 +131,13 @@ local function getLoadedModules()
     return loadedModules
 end
 
+local function getCategorizedModules()
+    return categorizeModules(getModules())
+end
+
 local function refreshLoadedModules()
     modules.data = {}
-    modules.loaded = categorizeLoadedModules(getLoadedModules())
+    modules.loaded = getCategorizedModules()
 end
 
 local function getModule(onScreenName)
@@ -975,6 +993,7 @@ local function draw()
     local windowPaddingX = ImGui.GetStyle().WindowPadding.x
     local framePaddingX = ImGui.GetStyle().FramePadding.x
     local itemSpacingY = ImGui.GetStyle().ItemSpacing.y
+    local scrollbarSize = ImGui.GetStyle().ScrollbarSize
     local itemWidth = windowWidth - 2 * windowPaddingX
     local cellHeight = textHeight + itemSpacingY
     local regionPos = {}
@@ -991,10 +1010,10 @@ local function draw()
         modules.filtered = search.filter("GameModules.Root", modules.loaded, search.getFilterQuery("GameModules.Root"))
     end
 
-    local headerColumnWidth = itemWidth / 2
+    local itemColumnWidth = itemWidth / 2 + (scrollbarSize / 2)
 
     ImGui.Columns(2, "##GameModules.LoadedModules.ListHeader")
-    ImGui.SetColumnWidth(0, headerColumnWidth)
+    ImGui.SetColumnWidth(0, itemColumnWidth)
     ImGui.Separator()
     ImGuiExt.TextTitle("Module", 1, true)
     ImGui.NextColumn()
@@ -1006,10 +1025,8 @@ local function draw()
                                                                         320 * scaleFactor,
                                                                         ImGuiWindowFlags.NoBackground)
 
-    ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor("textAlt"))
     ImGui.Columns(2, "##GameModules.LoadedModules.List")
-    ImGui.SetColumnWidth(0, headerColumnWidth - windowPaddingX)
-    ImGui.PopStyleColor()
+    ImGui.SetColumnWidth(0, itemColumnWidth - windowPaddingX)
 
     for _, module in ipairs(modules.filtered) do
         if modules.selected[module.onScreenName] == nil then
@@ -1114,6 +1131,10 @@ end
 
 local events = {}
 
+function events.onInit()
+    refreshLoadedModules()
+end
+
 function events.onOverlayOpen()
     refreshLoadedModules()
 end
@@ -1122,8 +1143,7 @@ return {
     __NAME = "Game Modules",
     __ICON = IconGlyphs.Bookshelf,
     appApi = {
-        categorizeLoadedModules = categorizeLoadedModules,
-        getLoadedModules = getLoadedModules
+        getCategorizedModules = getCategorizedModules
     },
     draw = draw,
     drawSettings = drawSettings,

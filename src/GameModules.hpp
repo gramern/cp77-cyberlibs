@@ -22,11 +22,11 @@ public:
     static Red::CString GetCompanyName(const Red::CString& fileNameOrPath);
     static Red::CString GetDescription(const Red::CString& fileNameOrPath);
     static Red::CString GetEntryPoint(const Red::CString& fileNameOrPath);
-    static Red::DynArray<GameModulesExportArray> GetExport(const Red::CString& fileNameOrPath);
+    static Red::DynArray<GameModulesExportEntry> GetExport(const Red::CString& fileNameOrPath);
     static Red::CString GetFilePath(const Red::CString& fileNameOrPath);
     static Red::CString GetFileSize(const Red::CString& fileNameOrPath);
     static Red::CString GetFileType(const Red::CString& fileNameOrPath);
-    static Red::DynArray<GameModulesImportArray> GetImport(const Red::CString& fileNameOrPath);
+    static Red::DynArray<GameModulesImportEntry> GetImport(const Red::CString& fileNameOrPath);
     static Red::CString GetLoadAddress(const Red::CString& fileNameOrPath);
     static Red::DynArray<Red::CString> GetLoadedModules();
     static Red::CString GetMappedSize(const Red::CString& fileNameOrPath);

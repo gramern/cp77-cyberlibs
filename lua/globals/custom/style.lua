@@ -33,15 +33,18 @@ function style.formatEntry(text)
     return entry
 end
 
----@param itemsNumber number
+---@param itemsNumber number?
 ---@return string
 function style.formatFooter(itemsNumber)
     local footer
 
     if isStyle then
         footer = "|----------------------------------------------------------------------------------" ..
-                    "\n[ DATA EXTRACTION COMPLETE ]\n" ..
-                    string.format("[ Extracted %d data packets. ]", itemsNumber)
+                    "\n[ DATA EXTRACTION COMPLETE ]\n"
+
+        if itemsNumber then
+            footer = footer .. string.format("[ Extracted %d data packets. ]", itemsNumber)
+        end
     else
         footer = "Items: " .. itemsNumber
     end

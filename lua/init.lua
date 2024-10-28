@@ -46,19 +46,37 @@ local tables = require("globals/tables")
 local utils = require("globals/utils")
 
 ------------------
--- App / Public API
+-- Knowledge Base
+------------------
+
+local help = require("knowledgeBase/help")
+
+------------------
+-- App Tables
 ------------------
 
 local publicApi = require("api/publicApi")
+local appApi = {}
+local appModules = {}
+local appModulesContents = {}
+
+------------------
+-- App / Public API
+------------------
 
 local function registerPublicApi()
     Cyberlibs = tables.add(Cyberlibs, publicApi)
 end
 
-local appApi = {}
-
+---@return boolean
 function appApi.isRootWindow()
     return isRootWindow
+end
+
+---@param moduleFolderName string
+---@return boolean
+function appApi.isAppModule(moduleFolderName)
+    return appModules[moduleFolderName] ~= nil
 end
 
 local function registerAppModulesApi()
@@ -85,10 +103,6 @@ end
 ------------------
 -- App Modules
 ------------------
-
-local appModules = {}
-
-local appModulesContents = {}
 
 local function verifyAppModule(path)
     local moduleFile = loadfile(path)(appApi)
@@ -177,12 +191,6 @@ local function fireAppModulesEvents(appEventName, ...)
 end
 
 ------------------
--- Knowledge Base
-------------------
-
-local help = require("knowledgeBase/help")
-
-------------------
 -- Root Window
 ------------------
 
@@ -250,12 +258,17 @@ local function drawAboutTab()
     if tabAbout.pluginVersion ~= "" then return end
     tabAbout.pluginVersion = Cyberlibs.Version()
     tabAbout.luaGuiVersion = Cyberlibs.Version()
-    local thirdparty = loadfile("thirdparty")
+    local thirdparty = GameDiagnostics.ReadTextFile("red4ext/plugins/Cyberlibs/THIRD_PARTY_LICENSES.md")
+    local thanks = GameDiagnostics.ReadTextFile("bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs/thanks.md")
 
     if thirdparty ~= nil then
-        tabAbout.licenses = utils.indentString(Cyberlibs.__LICENSE .. "\n" .. thirdparty(), -20, true)
+        tabAbout.licenses = utils.indentString(Cyberlibs.__LICENSE, -20, true) .. "\n" .. thirdparty
     else
         tabAbout.licenses = utils.indentString(Cyberlibs.__LICENSE, -20, true)
+    end
+
+    if thanks ~= nil then
+        tabAbout.licenses = tabAbout.licenses .. "\n\n" .. thanks
     end
 end
 

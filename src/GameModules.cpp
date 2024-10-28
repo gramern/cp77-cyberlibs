@@ -119,13 +119,13 @@ Red::CString CyberlibsCore::GameModules::GetEntryPoint(const Red::CString& fileN
 }
 
 // Export
-Red::DynArray<CyberlibsCore::GameModulesExportArray> CyberlibsCore::GameModules::GetExport(const Red::CString& fileNameOrPath)
+Red::DynArray<CyberlibsCore::GameModulesExportEntry> CyberlibsCore::GameModules::GetExport(const Red::CString& fileNameOrPath)
 {
-    Red::DynArray<GameModulesExportArray> result;
+    Red::DynArray<GameModulesExportEntry> result;
 
     if (!checkRateLimit())
     {
-        GameModulesExportArray funcInfo;
+        GameModulesExportEntry funcInfo;
         funcInfo.entry = RATE_LIMIT_EXCEEDED;
         funcInfo.ordinal = 0;
         funcInfo.rva = 0;
@@ -155,7 +155,7 @@ Red::DynArray<CyberlibsCore::GameModulesExportArray> CyberlibsCore::GameModules:
         {
             for (const auto& func : exportData->vecFuncs)
             {
-                GameModulesExportArray funcInfo;
+                GameModulesExportEntry funcInfo;
                 funcInfo.entry = Red::CString(func.strFuncName.c_str());
                 funcInfo.ordinal = func.dwOrdinal;
                 funcInfo.rva = func.dwFuncRVA;
@@ -168,7 +168,7 @@ Red::DynArray<CyberlibsCore::GameModulesExportArray> CyberlibsCore::GameModules:
     }
     catch (...)
     {
-        GameModulesExportArray funcInfo;
+        GameModulesExportEntry funcInfo;
         funcInfo.entry = UNKNOWN_VALUE;
         funcInfo.ordinal = 0;
         funcInfo.rva = 0;
@@ -308,13 +308,13 @@ Red::CString CyberlibsCore::GameModules::GetFileType(const Red::CString& fileNam
 }
 
 // Import
-Red::DynArray<CyberlibsCore::GameModulesImportArray> CyberlibsCore::GameModules::GetImport(const Red::CString& fileNameOrPath)
+Red::DynArray<CyberlibsCore::GameModulesImportEntry> CyberlibsCore::GameModules::GetImport(const Red::CString& fileNameOrPath)
 {
-    Red::DynArray<GameModulesImportArray> result;
+    Red::DynArray<GameModulesImportEntry> result;
 
     if (!checkRateLimit())
     {
-        GameModulesImportArray moduleInfo;
+        GameModulesImportEntry moduleInfo;
         moduleInfo.fileName = RATE_LIMIT_EXCEEDED;
         result.PushBack(moduleInfo);
 
@@ -341,7 +341,7 @@ Red::DynArray<CyberlibsCore::GameModulesImportArray> CyberlibsCore::GameModules:
         {
             for (const auto& module : *importData)
             {
-                GameModulesImportArray moduleInfo;
+                GameModulesImportEntry moduleInfo;
                 moduleInfo.fileName = Red::CString(module.strModuleName.c_str());
                 for (const auto& func : module.vecImportFunc)
                 {
@@ -355,7 +355,7 @@ Red::DynArray<CyberlibsCore::GameModulesImportArray> CyberlibsCore::GameModules:
     }
     catch (...)
     {
-        GameModulesImportArray moduleInfo;
+        GameModulesImportEntry moduleInfo;
         moduleInfo.fileName = UNKNOWN_VALUE;
         result.PushBack(moduleInfo);
 

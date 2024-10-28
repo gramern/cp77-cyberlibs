@@ -4,7 +4,7 @@
 #include <RedLib.hpp>
 #include "GameModules.hpp"
 
-namespace CyberlibsAPI
+namespace CyberlibsCore
 {
 class Cyberlibs : Red::IScriptable
 {
@@ -31,14 +31,14 @@ public:
     inline static void PrintTimeDateStamp(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
     inline static void PrintVersion(const Red::CString& fileNameOrPath, Red::Optional<bool> forceLog) {}
 
-    RTTI_IMPL_TYPEINFO(CyberlibsAPI::Cyberlibs);
+    RTTI_IMPL_TYPEINFO(CyberlibsCore::Cyberlibs);
     RTTI_IMPL_ALLOCATOR();
 };
-} // namespace CyberlibsAPI
+} // namespace CyberlibsCore
 
-RTTI_DEFINE_CLASS(CyberlibsAPI::Cyberlibs,
+RTTI_DEFINE_CLASS(CyberlibsCore::Cyberlibs,
 {
-    RTTI_ALIAS("CyberlibsAPI.Cyberlibs");
+    RTTI_ALIAS("CyberlibsCore.Cyberlibs");
 
     RTTI_METHOD(Help);
     RTTI_METHOD(Version);

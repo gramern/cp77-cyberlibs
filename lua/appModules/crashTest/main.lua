@@ -16,9 +16,25 @@ local function isCrashTest()
     return utils.isDelay("crashTest")
 end
 
+local function parseModule(filePath, moduleData)
+    moduleData = {
+        ["Company Name"] = GameModules.GetCompanyName(filePath),
+        ["Description"] = GameModules.GetDescription(filePath),
+        ["Entry Point"] = GameModules.GetEntryPoint(filePath),
+        ["Export"] = GameModules.GetExport(filePath),
+        ["File Size"] = GameModules.GetFileSize(filePath),
+        ["File Type"] = GameModules.GetFileType(filePath),
+        ["Import"] = GameModules.GetImport(filePath),
+        ["Load Address"] = GameModules.GetLoadAddress(filePath),
+        ["Mapped Size"] = GameModules.GetMappedSize(filePath),
+        ["TimeDateStamp"] = GameModules.GetTimeDateStamp(filePath),
+        ["Version"] = Cyberlibs.GetVersion(filePath)
+    }
+end
+
 local function executeCrashTest()
     local loadedModules = app.getLoadedModules()
-    local lodadedNumber = #loadedModules
+    local lodadedCount = #loadedModules
     local filePath
     local moduleData = {}
 
@@ -32,27 +48,15 @@ local function executeCrashTest()
         if module.fileName == "Cyberpunk2077.exe" then
             filePath = module.filePath
 
-            moduleData = {
-                ["Company Name"] = GameModules.GetCompanyName(filePath),
-                ["Description"] = GameModules.GetDescription(filePath),
-                ["Entry Point"] = GameModules.GetEntryPoint(filePath),
-                ["Export"] = GameModules.GetExport(filePath),
-                ["File Size"] = GameModules.GetFileSize(filePath),
-                ["File Type"] = GameModules.GetFileType(filePath),
-                ["Import"] = GameModules.GetImport(filePath),
-                ["Load Address"] = GameModules.GetLoadAddress(filePath),
-                ["Mapped Size"] = GameModules.GetMappedSize(filePath),
-                ["TimeDateStamp"] = GameModules.GetTimeDateStamp(filePath),
-                ["Version"] = Cyberlibs.GetVersion(filePath)
-            }
+            parseModule(filePath, moduleData)
         end
     end
 
-    local pickedNumber = min(elementsToPick - 1, lodadedNumber)
+    local pickedCount = min(elementsToPick - 1, lodadedCount)
     local picked = {}
 
-    for i = 1, pickedNumber do
-        local randomIndex = random(1, lodadedNumber)
+    for i = 1, pickedCount do
+        local randomIndex = random(1, lodadedCount)
         insert(picked, loadedModules[randomIndex])
         remove(loadedModules, randomIndex)
     end
@@ -60,22 +64,10 @@ local function executeCrashTest()
     for _, module in ipairs(picked) do
         filePath = module.filePath
 
-        moduleData = {
-            ["Company Name"] = GameModules.GetCompanyName(filePath),
-            ["Description"] = GameModules.GetDescription(filePath),
-            ["Entry Point"] = GameModules.GetEntryPoint(filePath),
-            ["Export"] = GameModules.GetExport(filePath),
-            ["File Size"] = GameModules.GetFileSize(filePath),
-            ["File Type"] = GameModules.GetFileType(filePath),
-            ["Import"] = GameModules.GetImport(filePath),
-            ["Load Address"] = GameModules.GetLoadAddress(filePath),
-            ["Mapped Size"] = GameModules.GetMappedSize(filePath),
-            ["TimeDateStamp"] = GameModules.GetTimeDateStamp(filePath),
-            ["Version"] = Cyberlibs.GetVersion(filePath)
-        }
+        parseModule(filePath, moduleData)
     end
 
-    logger.debug(pickedNumber, tables.tableToString(picked, true))
+    logger.debug(pickedCount, tables.tableToString(picked, true))
     ImGuiExt.SetNotification(interval - 0.2, "Crash Test In Progress...", false, ImVec2.new(40, 40))
     utils.setDelay(interval, "crashTest", executeCrashTest)
 end

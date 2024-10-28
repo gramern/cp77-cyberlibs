@@ -86,6 +86,7 @@ end
 function utils.normalizePath(path)
     path = path:gsub("\\", "/")
     path = path:lower()
+    path = path:gsub("^%a:", "")
     path = path:gsub("^/", "")
     
     return path
@@ -186,6 +187,16 @@ function utils.indentString(text, spaces, preserveAsBlock)
     end
 
     return tableConcat(lines, "\n")
+end
+
+---@param text string
+---@param charCount integer
+---@param filler string
+---@return string
+function utils.setStringCursor(text, charCount, filler)
+    local count = #text < charCount and charCount - #text or 1
+
+    return stringRep(filler, count)
 end
 
 ---@param text string

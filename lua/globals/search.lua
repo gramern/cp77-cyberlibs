@@ -301,11 +301,11 @@ end
 
 ---@param instanceName string?
 function search.flushFilter(instanceName)
-        if instanceName then
-            filter.instances[instanceName] = nil
-        else
-            filter.instances = {}
-        end
+    if instanceName then
+        filter.instances[instanceName] = nil
+    else
+        filter.instances = {}
+    end
 end
 
 

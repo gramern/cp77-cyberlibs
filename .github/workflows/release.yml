@@ -60,7 +60,6 @@ jobs:
           
           # Create dirs
           New-Item -ItemType directory -Path "$packagingDir/bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs" -Force
-          New-Item -ItemType directory -Path "$packagingDir/r6/scripts/Cyberlibs/" -Force
           
           # Copy (exclude crashTest)
           $luaSourceDir = "../lua"
@@ -73,8 +72,6 @@ jobs:
               Copy-Item -Path $_.FullName -Destination $targetPath -Recurse
             }
           }
-
-          Copy-Item -Path "../scripts/CyberlibsAPI.reds" -Destination "$packagingDir/r6/scripts/Cyberlibs/"
           
           # Create ZIP
           7z a "CyberlibsApp-v${env:VERSION}.zip" "$packagingDir/*"

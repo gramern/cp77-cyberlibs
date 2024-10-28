@@ -70,6 +70,136 @@ bool CyberlibsCore::GameDiagnostics::IsDirectory(const Red::CString& relativePat
     }
 }
 
+Red::DynArray<CyberlibsCore::GameDiagnosticsPathEntry> CyberlibsCore::GameDiagnostics::ListDirectory(
+    const Red::CString& relativePath)
+{
+    Red::DynArray<GameDiagnosticsPathEntry> result;
+
+    try
+    {
+        auto gamePath = GetGamePath();
+        if (gamePath.Length() == 0)
+        {
+            return result;
+        }
+
+        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / relativePath.c_str();
+        fullPath = fullPath.lexically_normal();
+        if (!isPathSafe(fullPath) || !std::filesystem::exists(fullPath) || !std::filesystem::is_directory(fullPath))
+        {
+            return result;
+        }
+
+        for (const auto& entry : std::filesystem::directory_iterator(fullPath))
+        {
+            GameDiagnosticsPathEntry dirEntry;
+            dirEntry.name = Red::CString(entry.path().filename().string().c_str());
+            dirEntry.type = entry.is_directory() ? Red::CString("dir") : Red::CString("file");
+            result.PushBack(dirEntry);
+        }
+    }
+    catch (const std::exception&)
+    {
+        result.Clear();
+    }
+
+    return result;
+}
+
+Red::CString CyberlibsCore::GameDiagnostics::ReadTextFile(const Red::CString& relativeFilePath)
+{
+    try
+    {
+        auto gamePath = GetGamePath();
+        if (gamePath.Length() == 0)
+        {
+            return Red::CString("");
+        }
+
+        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / relativeFilePath.c_str();
+        fullPath = fullPath.lexically_normal();
+
+        if (!isPathSafe(fullPath) || !std::filesystem::exists(fullPath) || !std::filesystem::is_regular_file(fullPath))
+        {
+            return Red::CString("");
+        }
+
+        if (!isTextFile(fullPath))
+        {
+            return Red::CString("");
+        }
+
+        const size_t MAX_FILE_SIZE = 10 * 1024 * 1024; //100MB limit
+        auto fileSize = std::filesystem::file_size(fullPath);
+        if (fileSize > MAX_FILE_SIZE)
+        {
+            return Red::CString("Requested file exceeds 100MB file size limit.");
+        }
+
+        std::ifstream file(fullPath, std::ios::in | std::ios::binary);
+        if (!file.is_open())
+        {
+            return Red::CString("");
+        }
+
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        std::string content = buffer.str();
+        bool isValidUtf8 = true;
+        for (size_t i = 0; i < content.length();)
+        {
+            if ((content[i] & 0x80) == 0)
+            {
+                i++;
+            }
+            else if ((content[i] & 0xE0) == 0xC0)
+            {
+                if (i + 1 >= content.length() || (content[i + 1] & 0xC0) != 0x80)
+                {
+                    isValidUtf8 = false;
+                    break;
+                }
+                i += 2;
+            }
+            else if ((content[i] & 0xF0) == 0xE0)
+            {
+                if (i + 2 >= content.length() || (content[i + 1] & 0xC0) != 0x80 || (content[i + 2] & 0xC0) != 0x80)
+                {
+                    isValidUtf8 = false;
+                    break;
+                }
+                i += 3;
+            }
+            else if ((content[i] & 0xF8) == 0xF0)
+            {
+                if (i + 3 >= content.length() || (content[i + 1] & 0xC0) != 0x80 || (content[i + 2] & 0xC0) != 0x80 ||
+                    (content[i + 3] & 0xC0) != 0x80)
+                {
+                    isValidUtf8 = false;
+                    break;
+                }
+                i += 4;
+            }
+            else
+            {
+                isValidUtf8 = false;
+                break;
+            }
+        }
+
+        if (!isValidUtf8)
+        {
+            return Red::CString("");
+        }
+
+        return Red::CString(content.c_str());
+    }
+    catch (const std::exception&)
+    {
+        return Red::CString("");
+    }
+}
+
 bool CyberlibsCore::GameDiagnostics::WriteToOutput(const Red::CString& relativeFilePath, const Red::CString& content,
                                                    Red::Optional<bool> append)
 {
@@ -207,3 +337,12 @@ bool CyberlibsCore::GameDiagnostics::isPathSafe(const std::filesystem::path& pat
         return false;
     }
 }
+
+bool CyberlibsCore::GameDiagnostics::isTextFile(const std::filesystem::path& path)
+{
+    std::string extension = path.extension().string();
+    std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+    return extension == ".txt" || extension == ".log" || extension == ".md";
+}
+
+
