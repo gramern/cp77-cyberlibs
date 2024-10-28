@@ -28,13 +28,13 @@ function publicApi.SetPrintingStyle(isEnabled)
     logger.info("Printing in style:", isEnabled)
 end
 
-local function printHelpTopics(t, forceLog)
+local function printHelpTopics(t)
     for i, v in ipairs(t) do
-        logger.custom(false, forceLog, 0, style.formatEntry(i .. " " .. v))
+        logger.custom(false, false, 0, style.formatEntry(i .. " " .. v))
     end
 end
 
-function publicApi.Help(query, forceLog)
+function publicApi.Help(query)
     local help = require("knowledgeBase/help")
     local isTopic, itemType
 
@@ -52,10 +52,10 @@ function publicApi.Help(query, forceLog)
             itemType = "table"
         end
 
-        logger.custom(false, forceLog, 0, style.formatHeader("HELP FILES"))
+        logger.custom(false, false, 0, style.formatHeader("HELP FILES"))
     else
-        logger.custom(false, forceLog, 0, style.formatFailHeader("HELP FILES"))
-        logger.custom(false, forceLog, 1, ' Type Cyberlibs.Help() to start ')
+        logger.custom(false, false, 0, style.formatFailHeader("HELP FILES"))
+        logger.custom(false, false, 1, ' Type Cyberlibs.Help() to start ')
     
         return
     end
@@ -64,7 +64,7 @@ function publicApi.Help(query, forceLog)
         contents, itemsNumber = search.getBrowseContents('help')
 
         if itemType == "table" then
-            printHelpTopics(contents, forceLog)
+            printHelpTopics(contents)
         else
             local v = search.getBrowseItem('help', query)
 
@@ -74,30 +74,36 @@ function publicApi.Help(query, forceLog)
                 itemsNumber = #lines
 
                 for _, line in ipairs(lines) do
-                    logger.custom(false, forceLog, 0, style.formatEntry(line))
+                    logger.custom(false, false, 0, style.formatEntry(line))
                 end
             else
                 itemsNumber = 1
 
-                logger.custom(false, forceLog, 0, style.formatEntry(v))
+                logger.custom(false, false, 0, style.formatEntry(v))
             end
         end
     else
-        printHelpTopics(contents, false, forceLog)
+        printHelpTopics(contents)
     end
 
-    logger.custom(false, forceLog, 0, style.formatFooter(itemsNumber))
-    logger.custom(false, forceLog, 0, "")
+    logger.custom(false, false, 0, style.formatFooter(itemsNumber))
+    logger.custom(false, false, 0, "")
 
     if not isTopic then
-        logger.custom(false, forceLog, 1, " File not found in databank. ")
-        logger.custom(false, forceLog, 1, ' Type Cyberlibs.Help() to return ')
+        logger.custom(false, false, 1, " File not found in databank. ")
+        logger.custom(false, false, 1, ' Type Cyberlibs.Help() to return ')
     end
 
-    logger.custom(false, forceLog, 1, ' Type Cyberlibs.Help(number) to open file ')
+    logger.custom(false, false, 1, ' Type Cyberlibs.Help(number) to open file ')
 end
 
 function publicApi.GetVersion(fileNameOrPath)
+    if type(GameModules) == "nil" then
+        logger.warning("Install Cyberlibs RED4ext Plugin.")
+
+        return
+    end
+
     local versions = require("knowledgeBase/versions")
     search.setBrowseInstance('getVersion', versions.getTable())
     local fileName = utils.getFileName(fileNameOrPath)
@@ -115,7 +121,21 @@ function publicApi.GetVersion(fileNameOrPath)
     return version
 end
 
-function publicApi.PrintAttribute(fileNameOrPath, attribute, forceLog)
+--- Available attributes: `CompanyName`, `Description`, `EntryPoint`, `Export`,
+--- `FilePath`, `FileSize`, `FileType`, `Import`, `LoadAddress`, `MappedSize`, 
+--- `TimeDateStamp`, `Version`
+---@param fileNameOrPath string
+---@param attribute string
+---@param dump boolean?
+function publicApi.PrintAttribute(fileNameOrPath, attribute, dump)
+    if type(GameModules) == "nil" then
+        logger.warning("Install Cyberlibs RED4ext Plugin.")
+
+        return
+    end
+
+    local result
+
     local attributes = {
         ["CompanyName"] = function() return GameModules.GetCompanyName(fileNameOrPath) end,
         ["Description"] = function() return GameModules.GetDescription(fileNameOrPath) end,
@@ -130,12 +150,19 @@ function publicApi.PrintAttribute(fileNameOrPath, attribute, forceLog)
     }
 
     local arrays = {
-        ["Export"] = function() return publicApi.PrintExport(fileNameOrPath, forceLog) end,
-        ["Import"] = function() return publicApi.PrintImport(fileNameOrPath, forceLog) end,
+        ["Export"] = function() return publicApi.PrintExport(fileNameOrPath, dump) end,
+        ["Import"] = function() return publicApi.PrintImport(fileNameOrPath, dump) end,
     }
 
     if attributes[attribute] ~= nil then
-        logger.custom(false, forceLog, 0, attributes[attribute]())
+        result = attributes[attribute]()
+
+        logger.custom(false, false, 0, result)
+
+        if not dump then return end
+        local fileName = utils.getFileName(fileNameOrPath)
+
+        GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "-" .. attribute .. ".txt", result)
     elseif arrays[attribute] ~= nil then
         arrays[attribute]()
     else
@@ -143,7 +170,14 @@ function publicApi.PrintAttribute(fileNameOrPath, attribute, forceLog)
     end
 end
 
-function publicApi.PrintExport(fileNameOrPath, forceLog)
+function publicApi.PrintExport(fileNameOrPath, dump)
+    if type(GameModules) == "nil" then
+        logger.warning("Install Cyberlibs RED4ext Plugin.")
+
+        return
+    end
+
+    local result
 
     if not GameModules.IsLoaded(fileNameOrPath) then
         logger.custom(false, false, 1, " Module not found in databank. ")
@@ -159,26 +193,40 @@ function publicApi.PrintExport(fileNameOrPath, forceLog)
         return
     end
 
-    logger.custom(false, forceLog, 0, style.formatHeader("EXPORTS"))
-    logger.custom(false, forceLog, 0, style.formatEntry("TARGET MODULE:"))
+    result = style.formatHeader("EXPORTS")
+    result = result .. "\n" .. style.formatEntry("TARGET MODULE: " .. fileNameOrPath)
 
     local forwarder
 
     for i, export in ipairs(exportArray) do
-        forwarder = nil
+        forwarder = ""
 
         if export.forwarderName ~= "" then
             forwarder = "Forwarder: " .. export.forwarderName
         end
 
-        logger.custom(false, forceLog, 0, style.formatEntry("Entry" .. tostring(i) .. ": " .. export.entry ..
-                        "Ordinal: " .. export.ordinal .. "RVA: " .. export.rva .. forwarder))
+        result = result .. "\n" .. style.formatEntry("Entry" .. tostring(i) .. ": " .. export.entry ..
+                                                "Ordinal: " .. export.ordinal .. "RVA: " .. export.rva .. forwarder)
     end
 
-    logger.custom(false, forceLog, 0, style.formatFooter(#exportArray))
+    result = result .. "\n" .. style.formatFooter(#exportArray)
+
+    logger.custom(false, false, 0, result)
+
+    if not dump then return end
+    local fileName = utils.getFileName(fileNameOrPath)
+
+    GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "-Export.txt", result)
 end
 
-function publicApi.PrintImport(fileNameOrPath, forceLog)
+function publicApi.PrintImport(fileNameOrPath, dump)
+    if type(GameModules) == "nil" then
+        logger.warning("Install Cyberlibs RED4ext Plugin.")
+
+        return
+    end
+
+    local result
 
     if not GameModules.IsLoaded(fileNameOrPath) then
         logger.custom(false, false, 1, " Module not found in databank. ")
@@ -194,24 +242,50 @@ function publicApi.PrintImport(fileNameOrPath, forceLog)
         return
     end
 
-    logger.custom(false, forceLog, 0, style.formatHeader("IMPORTS"))
-    logger.custom(false, forceLog, 0, style.formatEntry("TARGET MODULE:" .. fileNameOrPath))
+    result = style.formatHeader("IMPORTS")
+    result = result .. "\n" .. style.formatEntry("TARGET MODULE:" .. fileNameOrPath)
 
     for i, import in ipairs(importArray) do
-        logger.custom(false, forceLog, 0, style.formatEntry("+ Module" .. tostring(i) .. ": " .. import.fileName))
+        result = result .. "\n" .. style.formatEntry("+ Module" .. tostring(i) .. ": " .. import.fileName)
         for j, entry in ipairs(import.entries) do
-            logger.custom(false, forceLog, 0, style.formatEntry("|- Entry " .. tostring(j) .. ": " .. entry))
+            result = result .. "\n" .. style.formatEntry("|- Entry " .. tostring(j) .. ": " .. entry)
         end
     end
 
-    logger.custom(false, forceLog, 0, style.formatFooter(#importArray))
+    result = result .. "\n" .. style.formatFooter(#importArray)
+
+    logger.custom(false, false, 0, result)
+
+    if not dump then return end
+    local fileName = utils.getFileName(fileNameOrPath)
+
+    GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "-Import.txt", result)
 end
 
-function publicApi.PrintIsLoaded(fileNameOrPath, forceLog)
-    logger.custom(false, forceLog, 0, GameModules.IsLoaded(fileNameOrPath))
+function publicApi.PrintIsLoaded(fileNameOrPath, dump)
+    if type(GameModules) == "nil" then
+        logger.warning("Install Cyberlibs RED4ext Plugin.")
+
+        return
+    end
+
+    local result = GameModules.IsLoaded(fileNameOrPath)
+
+    logger.custom(false, false, 0, result)
+
+    if not dump then return end
+    local fileName = utils.getFileName(fileNameOrPath)
+
+    GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "-IsLoaded-" .. GameDiagnostics.GetTimeDateStamp(true) .. ".txt", result)
 end
 
-function publicApi.PrintLoadedModules(forceLog)
+function publicApi.PrintLoadedModules(dump)
+    if type(GameModules) == "nil" then
+        logger.warning("Install Cyberlibs RED4ext Plugin.")
+
+        return
+    end
+
     local modulesArray = GameModules.GetLoadedModules()
 
     if #modulesArray == 0 then
@@ -220,21 +294,36 @@ function publicApi.PrintLoadedModules(forceLog)
         return
     end
 
-    logger.custom(false, forceLog, 0, style.formatHeader("LOADED MODULES"))
+    local result = style.formatHeader("LOADED MODULES")
 
     for _, module in ipairs(modulesArray) do
-        logger.custom(false, forceLog, 0, utils.getFileName(module))
+        result = result .. "\n" .. style.formatEntry(module)
     end
 
-    logger.custom(false, forceLog, 0, style.formatFooter(#modulesArray))
+    result = result .. "\n" .. style.formatFooter(#modulesArray)
+
+    logger.custom(false, false, 0, result)
+
+    if not dump then return end
+
+    GameDiagnostics.WriteToOutput("_PARSED_DATA/LoadedModules-" .. GameDiagnostics.GetTimeDateStamp(true) .. ".txt", result)
 end
 
-function publicApi.PrintTimeDateStamp(fileNameOrPath, forceLog)
-    logger.custom(false, forceLog, 0, GameModules.GetTimeDateStamp(fileNameOrPath))
-end
+function publicApi.PrintVersion(fileNameOrPath, dump)
+    if type(GameModules) == "nil" then
+        logger.warning("Install Cyberlibs RED4ext Plugin.")
 
-function publicApi.PrintVersion(fileNameOrPath, forceLog)
-    logger.custom(false, forceLog, 0, GameModules.GetVersion(fileNameOrPath))
+        return
+    end
+
+    local result = GameModules.GetVersion(fileNameOrPath)
+
+    logger.custom(false, dump, 0, result)
+
+    if not dump then return end
+    local fileName = utils.getFileName(fileNameOrPath)
+
+    GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "-Version.txt", result)
 end
 
 function publicApi.onInit()
@@ -246,40 +335,36 @@ function publicApi.onInit()
         GetMod('Cyberlibs').SetPrintingStyle(isEnabled)
     end)
 
-    Observe('Cyberlibs', 'Help', function(number, forceLog)
-        GetMod('Cyberlibs').Help(number, forceLog)
+    Observe('Cyberlibs', 'Help', function(number)
+        GetMod('Cyberlibs').Help(number)
     end)
 
     Override('Cyberlibs', 'GetVersion', function(fileNameOrPath)
         return GetMod('Cyberlibs').GetVersion(fileNameOrPath)
     end)
 
-    Observe('Cyberlibs', 'PrintAttribute', function(fileNameOrPath, attribute, forceLog)
-        GetMod('Cyberlibs').PrintAttribute(fileNameOrPath, attribute, forceLog)
+    Observe('Cyberlibs', 'PrintAttribute', function(fileNameOrPath, attribute, dump)
+        GetMod('Cyberlibs').PrintAttribute(fileNameOrPath, attribute, dump)
     end)
 
-    Observe('Cyberlibs', 'PrintExport', function(fileNameOrPath, forceLog)
-        GetMod('Cyberlibs').PrintExport(fileNameOrPath, forceLog)
+    Observe('Cyberlibs', 'PrintExport', function(fileNameOrPath, dump)
+        GetMod('Cyberlibs').PrintExport(fileNameOrPath, dump)
     end)
 
-    Observe('Cyberlibs', 'PrintImport', function(fileNameOrPath, forceLog)
-        GetMod('Cyberlibs').PrintImport(fileNameOrPath, forceLog)
+    Observe('Cyberlibs', 'PrintImport', function(fileNameOrPath, dump)
+        GetMod('Cyberlibs').PrintImport(fileNameOrPath, dump)
     end)
 
-    Observe('Cyberlibs', 'PrintIsLoaded', function(fileNameOrPath, forceLog)
-        GetMod('Cyberlibs').PrintIsLoaded(fileNameOrPath, forceLog)
+    Observe('Cyberlibs', 'PrintIsLoaded', function(fileNameOrPath, dump)
+        GetMod('Cyberlibs').PrintIsLoaded(fileNameOrPath, dump)
     end)
 
-    Observe('Cyberlibs', 'PrintLoadedModules', function(forceLog)
-        GetMod('Cyberlibs').PrintLoadedModules(forceLog)
+    Observe('Cyberlibs', 'PrintLoadedModules', function(dump)
+        GetMod('Cyberlibs').PrintLoadedModules(dump)
     end)
 
-    Observe('Cyberlibs', 'PrintVersion', function(fileNameOrPath, forceLog)
-        GetMod('Cyberlibs').PrintVersion(fileNameOrPath, forceLog)
-    end)
-
-    Observe('Cyberlibs', 'PrintTimeDateStamp', function(fileNameOrPath, forceLog)
-        GetMod('Cyberlibs').PrintTimeDateStamp(fileNameOrPath, forceLog)
+    Observe('Cyberlibs', 'PrintVersion', function(fileNameOrPath, dump)
+        GetMod('Cyberlibs').PrintVersion(fileNameOrPath, dump)
     end)
 end
 

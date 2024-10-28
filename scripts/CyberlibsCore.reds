@@ -6,21 +6,21 @@ public native class Cyberlibs {
   public static native func Version() -> String;
 
   // public API - CET app required
+  public static native func Help(opt number: Int32) -> Void;
+  public static native func SetPrintingStyle(isEnabled: Bool) -> Void;
   // returns a module version from file OR the mod's lua knowledge base
   public static native func GetVersion(fileNameOrPath: String) -> String;
-  public static native func SetPrintingStyle(isEnabled: Bool) -> Void;
-  public static native func Help(opt number: Int32, opt forceLog: Bool) -> Void;
-  public static native func PrintAttribute(fileNameOrPath: String, attribute: String, opt forceLog: Bool) -> Void;
-  public static native func PrintExport(fileNameOrPath: String, opt forceLog: Bool) -> Void;
-  public static native func PrintImport(fileNameOrPath: String, opt forceLog: Bool) -> Void;
-  public static native func PrintIsLoaded(fileNameOrPath: String, opt forceLog: Bool) -> Void;
-  public static native func PrintLoadedModules(opt forceLog: Bool) -> Void;
-  public static native func PrintVersion(fileNameOrPath: String, opt forceLog: Bool) -> Void;
+  public static native func PrintAttribute(fileNameOrPath: String, attribute: String, opt dump: Bool) -> Void;
+  public static native func PrintExport(fileNameOrPath: String, opt dump: Bool) -> Void;
+  public static native func PrintImport(fileNameOrPath: String, opt dump: Bool) -> Void;
+  public static native func PrintIsLoaded(fileNameOrPath: String, opt dump: Bool) -> Void;
+  public static native func PrintLoadedModules(opt dump: Bool) -> Void;
+  public static native func PrintVersion(fileNameOrPath: String, opt dump: Bool) -> Void;
 }
 
 public native class GameDiagnostics {
   public static native func GetGamePath() -> String;
-  public static native func GetTimestamp(opt pathFriendly: Bool) -> String;
+  public static native func GetTimeDateStamp(opt pathFriendly: Bool) -> String;
   public static native func IsFile(relativeFilePath: String) -> Bool;
   public static native func IsDirectory(relativePath: String) -> Bool;
   public static native func WriteToOutput(relativeFilePath: String, content: String, opt append: Bool) -> Bool;

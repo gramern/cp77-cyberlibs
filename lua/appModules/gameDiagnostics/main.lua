@@ -111,8 +111,6 @@ local function isInstalledModsReport(fileName)
         reports.installedMods.reportName = fileName
         reports.installedMods.path = GameDiagnostics.GetGamePath() .. "\\_DIAGNOSTICS\\_REPORTS"
 
-        print("Checked")
-
         return true
     else
         reports.installedMods.isReport = false
@@ -138,17 +136,20 @@ local function dumpInstalledMods()
     end
 
     local reportsDir = "_REPORTS"
-    local fileName = "InstalledMods-" .. GameDiagnostics.GetTimestamp(true) .. ".txt"
+    local fileName = "InstalledMods-" .. GameDiagnostics.GetTimeDateStamp(true) .. ".txt"
     local filePath = reportsDir .. "/" .. fileName
 
-    local text = "Loaded Mods Modules Report\nGenerated in Cyberlibs on " .. GameDiagnostics.GetTimestamp()
+    local text = "Installed Mods Report\nGenerated in Cyberlibs on " .. GameDiagnostics.GetTimeDateStamp()
     text = text .. "\nGame version: " .. GameModules.GetVersion("Cyberpunk2077.exe")
     text = text .. "\n\n\n" .. style.formatHeader("Mods Resources")
 
     local modsResourceAmount = 0
 
     for _, module in ipairs(installedModsResources.parsed) do
-        text = text .. "\n" .. style.formatEntry(module.name .. utils.setStringCursor(module.name, 40, " ") .. "Version: " .. module.version)
+        text = text .. "\n" .. style.formatEntry(module.name ..
+                                                    utils.setStringCursor(module.name, 40, " ") ..
+                                                    "Version: " ..
+                                                    module.version)
 
         if module.version ~= "NOT INSTALLED" then
             modsResourceAmount = modsResourceAmount + 1
@@ -162,7 +163,10 @@ local function dumpInstalledMods()
 
     for _, module in ipairs(modules) do
         if module.category == "mod / unknown" then
-            text = text .. "\n" .. style.formatEntry(module.filePath .. utils.setStringCursor(module.filePath, 70, " ") .. "Version: " .. Cyberlibs.GetVersion(module.filePath))
+            text = text .. "\n" .. style.formatEntry(module.filePath ..
+                                                        utils.setStringCursor(module.filePath, 70, " ") ..
+                                                        "Version: " ..
+                                                        Cyberlibs.GetVersion(module.filePath))
 
             modAmount = modAmount + 1
         end
@@ -215,7 +219,9 @@ local function draw()
             search.setFiltering(true)
         end
 
-        installedModsResources.filtered = search.filter("GameDiagnostics.Root", installedModsResources.parsed, search.getFilterQuery("GameDiagnostics.Root"))
+        installedModsResources.filtered = search.filter("GameDiagnostics.Root",
+                                                        installedModsResources.parsed,
+                                                        search.getFilterQuery("GameDiagnostics.Root"))
     end
 
     local itemColumnWidth = itemWidth / 2 + (scrollbarSize / 2)

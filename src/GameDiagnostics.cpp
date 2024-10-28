@@ -12,7 +12,7 @@ Red::CString CyberlibsCore::GameDiagnostics::GetGamePath()
     return Red::CString("");
 }
 
-Red::CString CyberlibsCore::GameDiagnostics::GetTimestamp(Red::Optional<bool> pathFriendly)
+Red::CString CyberlibsCore::GameDiagnostics::GetTimeDateStamp(Red::Optional<bool> pathFriendly)
 {
     auto now = std::chrono::system_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
