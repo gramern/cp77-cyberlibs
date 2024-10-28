@@ -62,6 +62,8 @@ local function isNativeModule(normalizedPath, nativeSet)
 end
 
 local function categorizeModules(loadedModules)
+    if loadedModules == nil then return {} end
+
     local modsResourcesTable = modsResources.getTable()
     local nativeTable = native.getTable()
     local redmodTable = redmod.getTable()
@@ -107,7 +109,14 @@ local function categorizeModules(loadedModules)
 end
 
 local function getModules()
-    local loadedPaths = GameModules.GetLoadedModules()
+    local loadedPaths = GameModules and GameModules.GetLoadedModules() or nil
+
+    if not loadedPaths then
+        logger.warning("Install Cyberlibs RED4ext Plugin.")
+
+        return {}
+    end
+
     local loadedModules = {}
     local fileNameCount = {}
 
@@ -1132,7 +1141,9 @@ end
 local events = {}
 
 function events.onInit()
-    refreshLoadedModules()
+    if not app.isCyberlibsDLL() then
+        logger.warning("Install Cyberlibs RED4ext Plugin.")
+    end
 end
 
 function events.onOverlayOpen()

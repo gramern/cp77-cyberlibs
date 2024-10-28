@@ -3,7 +3,6 @@ local app = ...
 local ImGuiExt = require("globals/ImGuiExt")
 local logger = require("globals/logger")
 local search = require("globals/search")
-local settings = require("globals/settings")
 local style = require("globals/custom/style")
 local tables = require("globals/tables")
 local utils = require("globals/utils")
@@ -13,9 +12,7 @@ local installedModsResources  = {
     parsed = {}
 }
 local reports = {
-    installedMods = {
-        isReport = false
-    }
+    installedMods = {}
 }
 
 local function sortModsResources(installed)
@@ -61,6 +58,13 @@ local function checkModsResources()
     end
 
     local categorizedModules = app.getCategorizedModules()
+
+    if not next(categorizedModules) then
+        logger.warning("Install Cyberlibs RED4ext Plugin.")
+
+        return {}
+    end
+
     local modsResources = require("knowledgeBase/modsResources")
     local modsResourcesTable = modsResources.getTable()
     local installed = {}
@@ -100,6 +104,8 @@ local function collectModsResourcesData()
 end
 
 local function isInstalledModsReport(fileName)
+    if not fileName then return end
+
     if GameDiagnostics.IsFile("_DIAGNOSTICS/_REPORTS/" .. fileName) then
         reports.installedMods.isReport = true
         reports.installedMods.reportName = fileName
@@ -125,6 +131,7 @@ local function dumpInstalledMods()
     local modules = app.getCategorizedModules()
 
     if not next(modules) then
+        logger.warning("Install Cyberlibs RED4ext Plugin.")
         logger.warning("No loaded modules found. Can't prepare a report.")
 
         return

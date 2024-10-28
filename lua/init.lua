@@ -1,10 +1,10 @@
 Cyberlibs = {
     __NAME = "Cyberlibs",
     __EDITION = nil,
-    __VERSION = { 0, 2, 0},
+    __VERSION = { 0, 2, 0 },
     __VERSION_SUFFIX = nil,
     __VERSION_STATUS = nil,
-    __DESCRIPTION = "Diagnostics tool to inspect and parse libraries loaded by Cyberpunk 2077 during runtime.",
+    __DESCRIPTION = "A mods resource and on-runtime diagnostics tool for Cyberpunk 2077.",
     __LICENSE =
         [[
         MIT License
@@ -71,6 +71,11 @@ end
 ---@return boolean
 function appApi.isRootWindow()
     return isRootWindow
+end
+
+---@return boolean
+function appApi.isCyberlibsDLL()
+    return type(GameModules) ~= "nil"
 end
 
 ---@param moduleFolderName string
@@ -256,6 +261,15 @@ local function drawAboutTab()
     ImGui.EndChildFrame()
 
     if tabAbout.pluginVersion ~= "" then return end
+
+    if not appApi.isCyberlibsDLL() then
+        tabAbout.pluginVersion = "Install Cyberlibs RED4ext Plugin."
+        tabAbout.luaGuiVersion = "Install Cyberlibs RED4ext Plugin."
+        tabAbout.licenses = utils.indentString(Cyberlibs.__LICENSE, -20, true)
+
+        return
+    end
+
     tabAbout.pluginVersion = Cyberlibs.Version()
     tabAbout.luaGuiVersion = Cyberlibs.Version()
     local thirdparty = GameDiagnostics.ReadTextFile("red4ext/plugins/Cyberlibs/THIRD_PARTY_LICENSES.md")
