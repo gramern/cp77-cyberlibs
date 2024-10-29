@@ -3,7 +3,7 @@
 -- (c) gramern 2024
 
 local search = {
-    __VERSION = { 0, 3, 0 },
+    __VERSION = { 0, 3, 1 },
 }
 
 local tables = require("globals/tables")
@@ -199,6 +199,14 @@ function search.getFilterQuery(instanceName)
     else
         return ""
     end
+end
+
+function search.serFilterQuery(instanceName, query)
+    if filter.instances[instanceName] ~= nil then
+        search.initializeFilterInstance(instanceName)
+    end
+
+    filter.instances[instanceName].query = query
 end
 
 ---@param instanceName string

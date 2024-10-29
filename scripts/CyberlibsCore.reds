@@ -19,8 +19,9 @@ public native class Cyberlibs {
 }
 
 public native class GameDiagnostics {
+  public static native func GetCurrentTimeDate(opt pathFriendly: Bool) -> String;
   public static native func GetGamePath() -> String;
-  public static native func GetTimeDateStamp(opt pathFriendly: Bool) -> String;
+  public static native func GetTimeDateStamp(relativeFilePath: String, opt pathFriendly: Bool) -> String;
   public static native func IsFile(relativeFilePath: String) -> Bool;
   public static native func IsDirectory(relativePath: String) -> Bool;
   public static native func WriteToOutput(relativeFilePath: String, content: String, opt append: Bool) -> Bool;
@@ -42,7 +43,7 @@ public native class GameModules {
   public static native func GetLoadAddress(fileNameOrPath: String) -> String;
   public static native func GetLoadedModules() -> array<String>;
   public static native func GetMappedSize(fileNameOrPath: String) -> String;
-  public static native func GetTimeDateStamp(fileNameOrPath: String) -> String;
+  public static native func GetTimeDateStamp(fileNameOrPath: String, opt pathFriendly: Bool) -> String;
   public static native func GetVersion(fileNameOrPath: String) -> String;
   public static native func IsLoaded(fileNameOrPath: String) -> Bool;
 }

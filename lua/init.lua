@@ -273,7 +273,7 @@ local function drawAboutTab()
     tabAbout.pluginVersion = Cyberlibs.Version()
     tabAbout.luaGuiVersion = Cyberlibs.Version()
     local thirdparty = GameDiagnostics.ReadTextFile("red4ext/plugins/Cyberlibs/THIRD_PARTY_LICENSES.md")
-    local thanks = GameDiagnostics.ReadTextFile("bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs/thanks.md")
+    local kudos = GameDiagnostics.ReadTextFile("bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs/kudos.md")
 
     if thirdparty ~= nil then
         tabAbout.licenses = utils.indentString(Cyberlibs.__LICENSE, -20, true) .. "\n" .. thirdparty
@@ -281,8 +281,8 @@ local function drawAboutTab()
         tabAbout.licenses = utils.indentString(Cyberlibs.__LICENSE, -20, true)
     end
 
-    if thanks ~= nil then
-        tabAbout.licenses = tabAbout.licenses .. "\n\n" .. thanks
+    if kudos ~= nil then
+        tabAbout.licenses = tabAbout.licenses .. "\n\n" .. kudos
     end
 end
 

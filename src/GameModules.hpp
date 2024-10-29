@@ -30,7 +30,7 @@ public:
     static Red::CString GetLoadAddress(const Red::CString& fileNameOrPath);
     static Red::DynArray<Red::CString> GetLoadedModules();
     static Red::CString GetMappedSize(const Red::CString& fileNameOrPath);
-    static Red::CString GetTimeDateStamp(const Red::CString& fileNameOrPath);
+    static Red::CString GetTimeDateStamp(const Red::CString& fileNameOrPath, Red::Optional<bool> pathFriendly);
     static Red::CString GetVersion(const Red::CString& fileNameOrPath);
     static bool IsLoaded(const Red::CString& fileNameOrPath);
 

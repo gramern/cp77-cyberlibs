@@ -197,17 +197,14 @@ Red::CString CyberlibsCore::GameModules::GetFilePath(const Red::CString& fileNam
             return UNKNOWN_VALUE;
         }
 
-        wchar_t wFilePath[MAX_PATH];
-        DWORD result = GetModuleFileNameW(hModule, wFilePath, MAX_PATH);
-        if (result == 0 || result == MAX_PATH)
+        wchar_t wFilePath[32768];
+        DWORD result = GetModuleFileNameW(hModule, wFilePath, sizeof(wFilePath) / sizeof(wchar_t));
+        if (result == 0 || result >= sizeof(wFilePath) / sizeof(wchar_t))
         {
             return UNKNOWN_VALUE;
         }
 
-        char filePath[MAX_PATH];
-        WideCharToMultiByte(CP_UTF8, 0, wFilePath, -1, filePath, MAX_PATH, NULL, NULL);
-
-        return Red::CString(filePath);
+        return wideCharToRedString(wFilePath);
     }
     catch (...)
     {
@@ -479,7 +476,8 @@ Red::CString CyberlibsCore::GameModules::GetMappedSize(const Red::CString& fileN
 }
 
 // TimeDateStamp
-Red::CString CyberlibsCore::GameModules::GetTimeDateStamp(const Red::CString& fileNameOrPath)
+Red::CString CyberlibsCore::GameModules::GetTimeDateStamp(const Red::CString& fileNameOrPath,
+                                                          Red::Optional<bool> pathFriendly)
 {
     if (!checkRateLimit())
     {
@@ -526,7 +524,14 @@ Red::CString CyberlibsCore::GameModules::GetTimeDateStamp(const Red::CString& fi
         time_t unixTime = static_cast<time_t>(timeDateStamp);
         struct tm timeInfo;
         gmtime_s(&timeInfo, &unixTime);
-        strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeInfo);
+        if (!pathFriendly)
+        {
+            strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeInfo);
+        }
+        else
+        {
+            strftime(buffer, sizeof(buffer), "%Y-%m-%d-%H-%M-%S", &timeInfo);
+        }
 
         return Red::CString(buffer);
     }

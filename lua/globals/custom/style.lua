@@ -40,10 +40,10 @@ function style.formatFooter(itemsNumber)
 
     if isStyle then
         footer = "|----------------------------------------------------------------------------------" ..
-                    "\n[ DATA EXTRACTION COMPLETE ]\n"
+                    "\n[ DATA EXTRACTION COMPLETE ]"
 
         if itemsNumber then
-            footer = footer .. string.format("[ Extracted %d data packets. ]", itemsNumber)
+            footer = footer .. string.format("\n[ Extracted %d data packets. ]", itemsNumber)
         end
     else
         footer = "Items: " .. itemsNumber

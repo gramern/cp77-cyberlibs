@@ -25,8 +25,11 @@ local widgetState = {
             return settings.getUserSetting("gameModules", "exportTableItemsPerPage") or 500
         end,
         importNodesCharThreshold = function()
-            return settings.getUserSetting("gameModules", "importNodesCharThreshold") or 2
+            return settings.getUserSetting("gameModules", "importNodesCharThreshold") or 3
         end,
+    },
+    modulesList = {
+        regionPos = {}
     }
 }
 
@@ -353,9 +356,9 @@ local function drawExportTable(exportLabel, export, startPos, itemWidth)
 
         ImGui.Separator()
         ImGuiExt.TextAltScale(tostring(startPos), 0.85, true)
-        local itemSpacingY = ImGui.GetStyle().ItemSpacing.y
+        local itemSpacing = ImGui.GetStyle().ItemSpacing
         local textHeight = ImGui.GetTextLineHeight()
-        local cellHeight = textHeight + itemSpacingY
+        local cellHeight = textHeight + itemSpacing.y
 
         startPos = startPos + 1
 
@@ -1001,11 +1004,11 @@ local function draw()
     local windowWidth = ImGui.GetWindowWidth()
     local windowPaddingX = ImGui.GetStyle().WindowPadding.x
     local framePaddingX = ImGui.GetStyle().FramePadding.x
-    local itemSpacingY = ImGui.GetStyle().ItemSpacing.y
+    local itemSpacing = ImGui.GetStyle().ItemSpacing
     local scrollbarSize = ImGui.GetStyle().ScrollbarSize
     local itemWidth = windowWidth - 2 * windowPaddingX
-    local cellHeight = textHeight + itemSpacingY
-    local regionPos = {}
+    local cellHeight = textHeight + itemSpacing.y
+    local regionPos = {} -- widgetState.modulesList.regionPos
 
     search.updateFilterInstance("GameModules.Root")
 
@@ -1042,22 +1045,17 @@ local function draw()
             modules.selected[module.onScreenName] = false
         end
 
-        local textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor("textAlt")
         regionPos.x, regionPos.y = ImGui.GetCursorScreenPos()
-        regionPos.y = regionPos.y - (itemSpacingY / 2)
-        local regionSize = ImVec2.new(windowWidth, cellHeight)
+        regionPos.y = regionPos.y - (itemSpacing.y / 2)
+        local regionSize = ImVec2.new(itemWidth, cellHeight)
 
-        if not widgetState.__global.isContextPopup or
-            modules.selected[module.onScreenName] == true then
+        if modules.selected[module.onScreenName] == true or
+            not widgetState.__global.isContextPopup and ImGuiExt.IsMouseHoverOverRegion(regionPos, regionSize) then
 
-            if ImGuiExt.IsMouseHoverOverRegion(regionPos, regionSize) or
-                modules.selected[module.onScreenName] == true then
-
-                textRed, textGreen, textBlue, textAlpha = ImGuiExt.GetActiveThemeColor("text")
-            end
+            ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor("text"))
+        else
+            ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor("textAlt"))
         end
-
-        ImGui.PushStyleColor(ImGuiCol.Text, textRed, textGreen, textBlue, textAlpha)
 
         if ImGui.Selectable(module.onScreenName, modules.selected[module.onScreenName],
                                                 ImGuiSelectableFlags.SpanAllColumns) then
@@ -1082,12 +1080,59 @@ local function draw()
     ImGui.Spacing()
     ImGui.Indent(framePaddingX)
 
+    local contentRegionAvailX = ImGui.GetContentRegionAvail()
+
     if next(modules.count) then
-        ImGuiExt.TextAlt(modules.count.all .. " modules, system: " .. modules.count["system"] ..
-                                            ", native: " .. modules.count["native"] ..
-                                            ", redmod: " .. modules.count["redmod"] ..
-                                            ", mods resource: " .. modules.count["mods resource"] ..
-                                            ", mod / unknown: " .. modules.count["mod / unknown"], true)
+        if ImGui.SmallButton("total: " .. modules.count.all) then
+            search.serFilterQuery("GameModules.Root", "")
+        end
+
+        local countBarWidth = ImGui.GetItemRectSize()
+
+        ImGui.SameLine()
+
+        if ImGui.SmallButton("system: " .. modules.count["system"]) then
+            search.serFilterQuery("GameModules.Root", "system")
+            search.setFiltering(true)
+        end
+
+        countBarWidth = countBarWidth + ImGui.GetItemRectSize()
+
+        ImGui.SameLine()
+
+        if ImGui.SmallButton("native: " .. modules.count["native"]) then
+            search.serFilterQuery("GameModules.Root", "native")
+            search.setFiltering(true)
+        end
+
+        countBarWidth = countBarWidth + ImGui.GetItemRectSize()
+
+        ImGui.SameLine()
+
+        if ImGui.SmallButton("redmod: " .. modules.count["redmod"]) then
+            search.serFilterQuery("GameModules.Root", "redmod")
+            search.setFiltering(true)
+        end
+
+        countBarWidth = countBarWidth + ImGui.GetItemRectSize()
+
+        ImGui.SameLine()
+
+        if ImGui.SmallButton("mods resource: " .. modules.count["mods resource"]) then
+            search.serFilterQuery("GameModules.Root", "mods resource")
+            search.setFiltering(true)
+        end
+
+        countBarWidth = countBarWidth + ImGui.GetItemRectSize()
+
+        if countBarWidth < contentRegionAvailX * 0.7 then
+            ImGui.SameLine()
+        end
+
+        if ImGui.SmallButton("mod / unknown: " .. modules.count["mod / unknown"]) then
+            search.serFilterQuery("GameModules.Root", "mod / unknown")
+            search.setFiltering(true)
+        end
     end
 
     ImGui.Spacing()
@@ -1095,16 +1140,15 @@ local function draw()
     ImGui.Spacing()
 
     local previewed = modules.data[modules.previewed] or {}
-    local previewRegionAvail = ImGui.GetContentRegionAvail()
     local labelWidth = ImGui.CalcTextSize("TimeDateStamp (UTC)") + 6 * ImGuiExt.GetResolutionFactor() + windowPaddingX
 
-    drawViewerRow("File Name", previewed["File Name"], previewRegionAvail, labelWidth)
-    drawViewerRow("Version", previewed["Version"], previewRegionAvail, labelWidth)
-    drawViewerRow("Description", previewed["Description"], previewRegionAvail, labelWidth)
-    drawViewerRow("File Path", previewed["File Path"], previewRegionAvail, labelWidth)
-    drawViewerRow("Entry Point", previewed["Entry Point"], previewRegionAvail, labelWidth)
-    drawViewerRow("Load Address", previewed["Load Address"], previewRegionAvail, labelWidth)
-    drawViewerRow("Mapped Size", previewed["Mapped Size"], previewRegionAvail, labelWidth)
+    drawViewerRow("File Name", previewed["File Name"], contentRegionAvailX, labelWidth)
+    drawViewerRow("Version", previewed["Version"], contentRegionAvailX, labelWidth)
+    drawViewerRow("Description", previewed["Description"], contentRegionAvailX, labelWidth)
+    drawViewerRow("File Path", previewed["File Path"], contentRegionAvailX, labelWidth)
+    drawViewerRow("Entry Point", previewed["Entry Point"], contentRegionAvailX, labelWidth)
+    drawViewerRow("Load Address", previewed["Load Address"], contentRegionAvailX, labelWidth)
+    drawViewerRow("Mapped Size", previewed["Mapped Size"], contentRegionAvailX, labelWidth)
     ImGui.Indent(-framePaddingX)
     ImGui.Spacing()
 end
@@ -1117,6 +1161,7 @@ local function drawSettings()
 
     itemsPerPage, itemsPerPageToggle = ImGui.SliderFloat("##itemsPerPage", widgetState.__global.exportTableItemsPerPage(), 100, 2000, "%.0f")
 
+    ImGuiExt.SetTooltip("Higher values may cause a noticeable performance hit when inspecting a module.")
     ImGui.SameLine()
     ImGuiExt.TextAlt("Module export table entries per page")
     
@@ -1128,14 +1173,13 @@ local function drawSettings()
 
     charThreshold, charThresholdToggle = ImGui.SliderFloat("##charThreshold", widgetState.__global.importNodesCharThreshold(), 0, 10, "%.0f")
     
+    ImGuiExt.SetTooltip("Lower values may cause a noticeable performance hit when inspecting a module.")
     ImGui.SameLine()
     ImGuiExt.TextAlt("Search query characters number to open import nodes")
 
     if charThresholdToggle then
         settings.setUserSetting("gameModules", "importNodesCharThreshold", charThreshold)
     end
-
-    ImGuiExt.TextAlt("Higher values above might cause noticeable performance hit when viewing a module.")
 end
 
 local events = {}
@@ -1154,7 +1198,9 @@ return {
     __NAME = "Game Modules",
     __ICON = IconGlyphs.Bookshelf,
     appApi = {
-        getCategorizedModules = getCategorizedModules
+        addModuleTab = addModuleTab,
+        getCategorizedModules = getCategorizedModules,
+        getLoadedModules = getModules
     },
     draw = draw,
     drawSettings = drawSettings,

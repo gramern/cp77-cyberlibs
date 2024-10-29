@@ -73,6 +73,13 @@ local function executeCrashTest()
 end
 
 local function initializeCrashTest()
+    if not app.isAppModule("gameModules") then
+        logger.warning("Install \"Game Modules\" app module to continue...")
+        ImGuiExt.SetNotification(3, "Install \"Game Modules\" app module to continue...", false)
+
+        return
+    end
+
     if not isRandomSeed then
         math.randomseed(os.time())
 
@@ -80,13 +87,13 @@ local function initializeCrashTest()
     end
 
     if isCrashTest() then return end
-    ImGuiExt.SetNotification(3, "Crash Testing Initialized")
+    ImGuiExt.SetNotification(3, "Crash Test Initialized")
     utils.setDelay(interval, "crashTest", executeCrashTest)
 end
 
 local function stopCrashTest()
     if not isCrashTest() then return end
-    ImGuiExt.SetNotification(3, "Crash Testing Cancelled")
+    ImGuiExt.SetNotification(3, "Crash Test Cancelled")
     utils.cancelDelay("crashTest")
 end
 
@@ -110,14 +117,14 @@ local function draw()
     ImGui.Spacing()
     ImGui.Spacing()
 
-    ImGuiExt.AlignNextItemToRight(300, contentRegionAvailX)
+    ImGuiExt.AlignNextItemToCenter(300, contentRegionAvailX)
 
     if not isCrashTest() then
         if ImGui.Button("Start Crash Test", 300, 0) then
             initializeCrashTest()
         end
 
-        ImGui.Text("")
+        ImGui.Spacing()
 
         local text = "The test may cause noticeable game lag."
         local textWidth = ImGui.CalcTextSize(text)
@@ -135,7 +142,7 @@ local function draw()
             stopCrashTest()
         end
         
-        ImGui.Text("")
+        ImGui.Spacing()
 
         local text = "Crash Test In Progress..."
         local textWidth = ImGui.CalcTextSize(text)
@@ -144,7 +151,7 @@ local function draw()
         ImGuiExt.TextAlt(text)
     end
 
-    ImGui.Spacing()
+    ImGui.Text("")
 end
 
 return {
@@ -152,7 +159,7 @@ return {
     __TITLE = "Loaded Modules Heavy Parsing Crash Test",
     draw = draw,
     inputs = {
-        { id = "intializeCrashTest", description = "Initalize Crash Testting", keyPressCallback = initializeCrashTest },
-        { id = "stopCrashTest", description = "Stop Crash Testing", keyPressCallback = stopCrashTest },
+        { id = "intializeCrashTest", description = "Initalize Crash Test", keyPressCallback = initializeCrashTest },
+        { id = "stopCrashTest", description = "Stop Crash Test", keyPressCallback = stopCrashTest },
     }
 }

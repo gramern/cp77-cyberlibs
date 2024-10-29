@@ -1,4 +1,4 @@
-# TOOLS USED
+# TOOLS USED DURING DEVELOPMENT
 
 GUI Prototypes: Fellow ImGui by Rayshader (Louis Pourier) (https://fellowimgui.dev),
 Bundling: Red CLI by Rayshader (Louis Pourier) (https://github.com/rayshader/cp2077-red-cli)

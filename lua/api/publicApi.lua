@@ -276,7 +276,7 @@ function publicApi.PrintIsLoaded(fileNameOrPath, dump)
     if not dump then return end
     local fileName = utils.getFileName(fileNameOrPath)
 
-    GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "-IsLoaded-" .. GameDiagnostics.GetTimeDateStamp(true) .. ".txt", result)
+    GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "-IsLoaded-" .. GameDiagnostics.GetCurrentTimeDate(true) .. ".txt", result)
 end
 
 function publicApi.PrintLoadedModules(dump)
@@ -306,7 +306,7 @@ function publicApi.PrintLoadedModules(dump)
 
     if not dump then return end
 
-    GameDiagnostics.WriteToOutput("_PARSED_DATA/LoadedModules-" .. GameDiagnostics.GetTimeDateStamp(true) .. ".txt", result)
+    GameDiagnostics.WriteToOutput("_PARSED_DATA/LoadedModules-" .. GameDiagnostics.GetCurrentTimeDate(true) .. ".txt", result)
 end
 
 function publicApi.PrintVersion(fileNameOrPath, dump)

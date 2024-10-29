@@ -1,18 +1,6 @@
 #include "GameDiagnostics.hpp"
 
-Red::CString CyberlibsCore::GameDiagnostics::GetGamePath()
-{
-    wchar_t path[MAX_PATH];
-    if (GetModuleFileNameW(NULL, path, MAX_PATH) != 0)
-    {
-        std::filesystem::path gamePath = path;
-        gamePath = gamePath.parent_path().parent_path().parent_path();
-        return Red::CString(gamePath.string().c_str());
-    }
-    return Red::CString("");
-}
-
-Red::CString CyberlibsCore::GameDiagnostics::GetTimeDateStamp(Red::Optional<bool> pathFriendly)
+Red::CString CyberlibsCore::GameDiagnostics::GetCurrentTimeDate(Red::Optional<bool> pathFriendly)
 {
     auto now = std::chrono::system_clock::now();
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
@@ -30,6 +18,84 @@ Red::CString CyberlibsCore::GameDiagnostics::GetTimeDateStamp(Red::Optional<bool
     }
 
     return Red::CString(ss.str().c_str());
+}
+
+Red::CString CyberlibsCore::GameDiagnostics::GetGamePath()
+{
+    try
+    {
+        wchar_t path[32768];
+        DWORD length = GetModuleFileNameW(NULL, path, sizeof(path) / sizeof(wchar_t));
+        if (length == 0 || length >= sizeof(path) / sizeof(wchar_t))
+        {
+            return Red::CString("");
+        }
+
+        std::filesystem::path gamePath = std::filesystem::path(path).lexically_normal();
+        gamePath = gamePath.parent_path().parent_path().parent_path();
+
+        return Red::CString(gamePath.string().c_str());
+    }
+    catch (const std::exception&)
+    {
+        return Red::CString("");
+    }
+}
+
+Red::CString CyberlibsCore::GameDiagnostics::GetTimeDateStamp(const Red::CString& relativeFilePath,
+                                                              Red::Optional<bool> pathFriendly)
+{
+    try
+    {
+        auto gamePath = GetGamePath();
+        if (gamePath.Length() == 0)
+        {
+            return Red::CString("");
+        }
+
+        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / relativeFilePath.c_str();
+        fullPath = fullPath.lexically_normal();
+
+        WIN32_FILE_ATTRIBUTE_DATA fileInfo;
+        if (!GetFileAttributesExW(fullPath.c_str(), GetFileExInfoStandard, &fileInfo))
+        {
+            return Red::CString("");
+        }
+
+        if ((fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ||
+            (fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DEVICE))
+        {
+            return Red::CString("");
+        }
+
+        if (!isPathSafe(fullPath))
+        {
+            return Red::CString("");
+        }
+
+        SYSTEMTIME systemTime;
+        FILETIME localFileTime;
+        FileTimeToLocalFileTime(&fileInfo.ftLastWriteTime, &localFileTime);
+        FileTimeToSystemTime(&localFileTime, &systemTime);
+
+        char buffer[32];
+        if (!pathFriendly)
+        {
+            snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d %02d:%02d:%02d", systemTime.wYear, systemTime.wMonth,
+                     systemTime.wDay, systemTime.wHour, systemTime.wMinute, systemTime.wSecond);
+        }
+        else
+        {
+            snprintf(buffer, sizeof(buffer), "%04d-%02d-%02d-%02d-%02d-%02d", systemTime.wYear, systemTime.wMonth,
+                     systemTime.wDay, systemTime.wHour, systemTime.wMinute, systemTime.wSecond);
+        }
+
+        return Red::CString(buffer);
+    }
+    catch (const std::exception&)
+    {
+        return Red::CString("");
+    }
 }
 
 bool CyberlibsCore::GameDiagnostics::IsFile(const Red::CString& relativeFilePath)
@@ -62,6 +128,7 @@ bool CyberlibsCore::GameDiagnostics::IsDirectory(const Red::CString& relativePat
         }
 
         std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / relativePath.c_str();
+
         return std::filesystem::exists(fullPath) && std::filesystem::is_directory(fullPath);
     }
     catch (const std::exception&)
@@ -129,65 +196,42 @@ Red::CString CyberlibsCore::GameDiagnostics::ReadTextFile(const Red::CString& re
             return Red::CString("");
         }
 
-        const size_t MAX_FILE_SIZE = 10 * 1024 * 1024; //100MB limit
-        auto fileSize = std::filesystem::file_size(fullPath);
-        if (fileSize > MAX_FILE_SIZE)
-        {
-            return Red::CString("Requested file exceeds 100MB file size limit.");
-        }
+        const size_t MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
 
-        std::ifstream file(fullPath, std::ios::in | std::ios::binary);
-        if (!file.is_open())
+        HANDLE hFile = CreateFileW(fullPath.c_str(),
+                                   GENERIC_READ,
+                                   FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                   NULL,
+                                   OPEN_EXISTING,
+                                   FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                                   NULL);
+
+        if (hFile == INVALID_HANDLE_VALUE)
         {
             return Red::CString("");
         }
 
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        std::string content = buffer.str();
-        bool isValidUtf8 = true;
-        for (size_t i = 0; i < content.length();)
+        std::unique_ptr<void, decltype(&CloseHandle)> fileGuard(hFile, CloseHandle);
+
+        LARGE_INTEGER fileSize;
+        if (!GetFileSizeEx(hFile, &fileSize) || fileSize.QuadPart > MAX_FILE_SIZE)
         {
-            if ((content[i] & 0x80) == 0)
-            {
-                i++;
-            }
-            else if ((content[i] & 0xE0) == 0xC0)
-            {
-                if (i + 1 >= content.length() || (content[i + 1] & 0xC0) != 0x80)
-                {
-                    isValidUtf8 = false;
-                    break;
-                }
-                i += 2;
-            }
-            else if ((content[i] & 0xF0) == 0xE0)
-            {
-                if (i + 2 >= content.length() || (content[i + 1] & 0xC0) != 0x80 || (content[i + 2] & 0xC0) != 0x80)
-                {
-                    isValidUtf8 = false;
-                    break;
-                }
-                i += 3;
-            }
-            else if ((content[i] & 0xF8) == 0xF0)
-            {
-                if (i + 3 >= content.length() || (content[i + 1] & 0xC0) != 0x80 || (content[i + 2] & 0xC0) != 0x80 ||
-                    (content[i + 3] & 0xC0) != 0x80)
-                {
-                    isValidUtf8 = false;
-                    break;
-                }
-                i += 4;
-            }
-            else
-            {
-                isValidUtf8 = false;
-                break;
-            }
+            return Red::CString("");
         }
 
-        if (!isValidUtf8)
+        std::string content;
+        content.resize(static_cast<size_t>(fileSize.QuadPart));
+
+        DWORD bytesRead = 0;
+        if (!ReadFile(hFile, content.data(), static_cast<DWORD>(content.size()), &bytesRead, NULL) ||
+            bytesRead != content.size())
+        {
+            return Red::CString("");
+        }
+
+        fileGuard.reset();
+
+        if (!isValidUtf8(content))
         {
             return Red::CString("");
         }
@@ -345,4 +389,58 @@ bool CyberlibsCore::GameDiagnostics::isTextFile(const std::filesystem::path& pat
     return extension == ".txt" || extension == ".log" || extension == ".md";
 }
 
+bool CyberlibsCore::GameDiagnostics::isValidUtf8(const std::string& str)
+{
+    const unsigned char* bytes = reinterpret_cast<const unsigned char*>(str.c_str());
+    const size_t len = str.length();
 
+    for (size_t i = 0; i < len;)
+    {
+        if (bytes[i] <= 0x7F)
+        {
+            i++;
+            continue;
+        }
+
+        if (bytes[i] >= 0xC2 && bytes[i] <= 0xDF)
+        {
+            if (i + 1 >= len || (bytes[i + 1] & 0xC0) != 0x80)
+                return false;
+            i += 2;
+            continue;
+        }
+
+        if (bytes[i] >= 0xE0 && bytes[i] <= 0xEF)
+        {
+            if (i + 2 >= len || (bytes[i + 1] & 0xC0) != 0x80 || (bytes[i + 2] & 0xC0) != 0x80)
+                return false;
+
+            if (bytes[i] == 0xE0 && (bytes[i + 1] < 0xA0))
+                return false;
+            if (bytes[i] == 0xED && (bytes[i + 1] >= 0xA0))
+                return false;
+
+            i += 3;
+            continue;
+        }
+
+        if (bytes[i] >= 0xF0 && bytes[i] <= 0xF4)
+        {
+            if (i + 3 >= len || (bytes[i + 1] & 0xC0) != 0x80 || (bytes[i + 2] & 0xC0) != 0x80 ||
+                (bytes[i + 3] & 0xC0) != 0x80)
+                return false;
+
+            if (bytes[i] == 0xF0 && (bytes[i + 1] < 0x90))
+                return false;
+            if (bytes[i] == 0xF4 && (bytes[i + 1] >= 0x90))
+                return false;
+
+            i += 4;
+            continue;
+        }
+
+        return false;
+    }
+
+    return true;
+}

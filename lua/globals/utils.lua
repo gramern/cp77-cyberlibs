@@ -3,7 +3,7 @@
 -- (c) gramern 2024
 
 local utils = {
-    __VERSION = { 0, 3, 0 },
+    __VERSION = { 0, 3, 1 },
 }
 
 local delays = {}
@@ -13,6 +13,56 @@ local logger = require("globals/logger")
 local floor, max = math.max, math.floor
 local stringFind, stringRep, stringSub = string.find, string.rep, string.sub
 local tableConcat, tableInsert = table.concat, table.insert
+
+------------------
+-- Dates
+------------------
+
+---@param timeDateStamp String
+---@return table
+function utils.parseTimeDateStamp(timeDateStamp)
+    local year, month, day, hour, min, sec, msec =
+    timeDateStamp:match("(%d+)-(%d+)-(%d+)%s+(%d+):(%d+):(%d+)%.(%d+)")
+
+    if not year then
+        year, month, day, hour, min, sec =
+            timeDateStamp:match("(%d+)-(%d+)-(%d+)%s+(%d+):(%d+):(%d+)")
+        msec = "0"
+    end
+
+    if not year then
+        year, month, day, hour, min, sec =
+            timeDateStamp:match("(%d+)-(%d+)-(%d+)-(%d+)-(%d+)-(%d+)")
+        msec = "0"
+    end
+
+    return {
+        year = tonumber(year),
+        month = tonumber(month),
+        day = tonumber(day),
+        hour = tonumber(hour),
+        min = tonumber(min),
+        sec = tonumber(sec),
+        msec = tonumber(msec)
+    }
+end
+
+---@param timeDateStamp1 string
+---@param timeDateStamp2 string
+---@return boolean --`true` for timeDateStamp1 newer than timeDateStamp2
+function utils.compareTimeDateStamps(timeDateStamp1, timeDateStamp2)
+    local stamp1 = utils.parseTimeDateStamp(timeDateStamp1)
+    local stamp2 = utils.parseTimeDateStamp(timeDateStamp2)
+
+    if stamp1.year ~= stamp2.year then return stamp1.year > stamp2.year end
+    if stamp1.month ~= stamp2.month then return stamp1.month > stamp2.month end
+    if stamp1.day ~= stamp2.day then return stamp1.day > stamp2.day end
+    if stamp1.hour ~= stamp2.hour then return stamp1.hour > stamp2.hour end
+    if stamp1.min ~= stamp2.min then return stamp1.min > stamp2.min end
+    if stamp1.sec ~= stamp2.sec then return stamp1.sec > stamp2.sec end
+
+    return stamp1.msec > stamp2.msec
+end
 
 ------------------
 -- Delays

@@ -20,7 +20,7 @@ local fallbackTheme = {
     bg = { 0, 0, 0, 0.75 },
     dim = { 0.25, 0.25, 0.25, 1 },
     pop = { 0.75, 0.75, 0.75, 1 },
-    scrollbar = { base = { 0.5, 0.5, 0.5, 1 }, dim = { 0.25, 0.25, 0.25, 1 }, pop = { 0.75, 0.75, 0.75, 1 }, rounding = 5, size = 20 },
+    scrollbar = { base = { 0.5, 0.5, 0.5, 1 }, dim = { 0.5, 0.5, 0.5, 1 }, pop = { 0.75, 0.75, 0.75, 1 }, rounding = 5, size = 20 },
     separator = { 0.5, 0.5, 0.5, 1 },
     child = { border = 0, rounding = 5 },
     frame = { border = 0, rounding = 5 },
@@ -126,6 +126,7 @@ function ImGuiExt.PushStyle()
     ImGui.PushStyleColor(ImGuiCol.ButtonHovered, pop[1], pop[2], pop[3], pop[4])
     ImGui.PushStyleColor(ImGuiCol.ButtonActive, dim[1], dim[2], dim[3], dim[4])
     ImGui.PushStyleColor(ImGuiCol.CheckMark, text[1], text[2], text[3], text[4])
+    ImGui.PushStyleColor(ImGuiCol.ChildBg, activeTheme.bg[1], activeTheme.bg[2], activeTheme.bg[3], activeTheme.bg[4])
     ImGui.PushStyleColor(ImGuiCol.FrameBg, base[1], base[2], base[3], base[4])
     ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, pop[1], pop[2], pop[3], pop[4])
     ImGui.PushStyleColor(ImGuiCol.FrameBgActive, dim[1], dim[2], dim[3], dim[4])
@@ -426,7 +427,7 @@ function ImGuiExt.Notification()
         local posX, posY
         local style = ImGui.GetStyle()
         local padding = style.WindowPadding
-        
+
         if not var.notification.screenPos then
             var.notification.textWidth = ImGui.CalcTextSize(var.notification.text)
             local totalWidth = var.notification.textWidth + 2 * padding.x
