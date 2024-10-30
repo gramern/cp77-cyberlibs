@@ -3,7 +3,7 @@ Cyberlibs = {
     __EDITION = nil,
     __VERSION = { 0, 2, 0 },
     __VERSION_SUFFIX = nil,
-    __VERSION_STATUS = nil,
+    __VERSION_STATUS = "beta2",
     __DESCRIPTION = "A mods resource and on-runtime diagnostics tool for Cyberpunk 2077.",
     __LICENSE =
         [[

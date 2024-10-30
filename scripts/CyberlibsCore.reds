@@ -1,14 +1,14 @@
 // Cyberlibs 0.2.0
 module CyberlibsCore
 
-public native class Cyberlibs extends IScriptable {
+public native class Cyberlibs {
   // returns Cyberlibs version
   public static native func Version() -> String;
 
   // public API - CET app required
   public static native func Help(opt number: Int32) -> Void;
   public static native func SetPrintingStyle(isEnabled: Bool) -> Void;
-  // returns a module version from file OR the mod's lua knowledge base
+  // returns a module version read from a file OR the mod's lua knowledge base
   public static native func GetVersion(fileNameOrPath: String) -> String;
   public static native func PrintAttribute(fileNameOrPath: String, attribute: String, opt dump: Bool) -> Void;
   public static native func PrintExport(fileNameOrPath: String, opt dump: Bool) -> Void;
@@ -19,7 +19,7 @@ public native class Cyberlibs extends IScriptable {
   public static native func PrintVersion(fileNameOrPath: String, opt dump: Bool) -> Void;
 }
 
-public native class GameDiagnostics extends IScriptable {
+public native class GameDiagnostics {
   public static native func GetCurrentTimeDate(opt pathFriendly: Bool) -> String;
   public static native func GetGamePath() -> String;
   public static native func GetTimeDateStamp(relativeFilePath: String, opt pathFriendly: Bool) -> String;
@@ -33,7 +33,7 @@ public native struct GameDiagnosticsPathEntry {
   native let type: String;
 }
 
-public native class GameModules extends IScriptable {
+public native class GameModules {
   public static native func GetCompanyName(fileNameOrPath: String) -> String;
   public static native func GetDescription(fileNameOrPath: String) -> String;
   public static native func GetEntryPoint(fileNameOrPath: String) -> String;
