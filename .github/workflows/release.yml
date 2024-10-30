@@ -42,13 +42,12 @@ jobs:
           
           # Create dirs
           New-Item -ItemType directory -Path "$packagingDir/red4ext/plugins/Cyberlibs" -Force
-          New-Item -ItemType directory -Path "$packagingDir/r6/scripts/Cyberlibs" -Force
           
           # Copy
           Copy-Item -Path "Release/Cyberlibs.dll" -Destination "$packagingDir/red4ext/plugins/Cyberlibs/"
           Copy-Item -Path "../LICENSE" -Destination "$packagingDir/red4ext/plugins/Cyberlibs/LICENSE.md"
           Copy-Item -Path "../THIRD_PARTY_LICENSES.md" -Destination "$packagingDir/red4ext/plugins/Cyberlibs/"
-          Copy-Item -Path "../scripts/CyberlibsCore.reds" -Destination "$packagingDir/r6/scripts/Cyberlibs/"
+          Copy-Item -Path "../scripts/CyberlibsCore.reds" -Destination "$packagingDir/red4ext/plugins/Cyberlibs/"
           
           # Create ZIP
           7z a "Cyberlibs-v${env:VERSION}.zip" "$packagingDir/*"

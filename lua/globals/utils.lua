@@ -3,7 +3,7 @@
 -- (c) gramern 2024
 
 local utils = {
-    __VERSION = { 0, 3, 1 },
+    __VERSION = { 0, 3, 2 },
 }
 
 local delays = {}
@@ -102,13 +102,11 @@ end
 function utils.updateDelays(deltaTime)
     if not next(delays) then return end
 
-    local delayToFire
-
     for key, delay in pairs(delays) do
         delay.remainingTime = delay.remainingTime - deltaTime
         
         if delay.remainingTime <= 0 then
-            delayToFire = delay
+            local delayToFire = delay
             delays[key] = nil
 
             if delayToFire.parameters then
@@ -123,7 +121,7 @@ function utils.updateDelays(deltaTime)
 end
 
 ------------------
--- Files
+-- Files, Paths
 ------------------
 
 ---@param path string
@@ -133,13 +131,70 @@ function utils.getFileName(path)
     return path:match(".*[/\\](.+)$") or path
 end
 
-function utils.normalizePath(path)
+---@param path string
+---@param removeDriveLetter boolean?
+---@return string
+function utils.normalizePath(path, removeDriveLetter)
     path = path:gsub("\\", "/")
     path = path:lower()
-    path = path:gsub("^%a:", "")
+
+    if removeDriveLetter then
+        path = path:gsub("^%a:", "")
+    end
+
     path = path:gsub("^/", "")
-    
+
     return path
+end
+
+---@param path string
+---@return boolean
+function utils.isValidPath(path)
+    if type(path) ~= "string" then
+        return false
+    end
+
+    path = path:match("^%s*(.-)%s*$")
+
+    if path == "" then
+        return false
+    end
+
+    local invalidChars = '[<>:"|%?%*]'
+    if path:match(invalidChars) then
+        return false
+    end
+
+    local pathComponent = "[^/\\]+"
+
+    local isWindows = path:match("^[A-Za-z]:\\") ~= nil
+    local isUnix = path:match("^/") ~= nil
+    
+    if not (isWindows or isUnix) then
+        local components = 0
+
+        for comp in path:gmatch(pathComponent) do
+            components = components + 1
+
+            if comp ~= "." and comp ~= ".." then
+                return true
+            end
+        end
+
+        return components > 0
+    end
+
+    local components = 0
+
+    for comp in path:gmatch(pathComponent) do
+        components = components + 1
+
+        if comp == "" then
+            return false
+        end
+    end
+
+    return components > 0
 end
 
 ------------------

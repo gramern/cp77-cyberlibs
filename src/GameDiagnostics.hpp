@@ -13,7 +13,7 @@
 
 namespace CyberlibsCore
 {
-class GameDiagnostics : Red::IScriptable
+class GameDiagnostics
 {
 public:
     static Red::CString GetCurrentTimeDate(Red::Optional<bool> pathFirendly);

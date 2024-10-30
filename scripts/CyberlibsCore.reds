@@ -1,7 +1,7 @@
 // Cyberlibs 0.2.0
 module CyberlibsCore
 
-public native class Cyberlibs {
+public native class Cyberlibs extends IScriptable {
   // returns Cyberlibs version
   public static native func Version() -> String;
 
@@ -15,10 +15,11 @@ public native class Cyberlibs {
   public static native func PrintImport(fileNameOrPath: String, opt dump: Bool) -> Void;
   public static native func PrintIsLoaded(fileNameOrPath: String, opt dump: Bool) -> Void;
   public static native func PrintLoadedModules(opt dump: Bool) -> Void;
+  public static native func PrintModuleInfo(fileNameOrPath: String, opt dump: Bool) -> Void;
   public static native func PrintVersion(fileNameOrPath: String, opt dump: Bool) -> Void;
 }
 
-public native class GameDiagnostics {
+public native class GameDiagnostics extends IScriptable {
   public static native func GetCurrentTimeDate(opt pathFriendly: Bool) -> String;
   public static native func GetGamePath() -> String;
   public static native func GetTimeDateStamp(relativeFilePath: String, opt pathFriendly: Bool) -> String;
@@ -32,7 +33,7 @@ public native struct GameDiagnosticsPathEntry {
   native let type: String;
 }
 
-public native class GameModules {
+public native class GameModules extends IScriptable {
   public static native func GetCompanyName(fileNameOrPath: String) -> String;
   public static native func GetDescription(fileNameOrPath: String) -> String;
   public static native func GetEntryPoint(fileNameOrPath: String) -> String;

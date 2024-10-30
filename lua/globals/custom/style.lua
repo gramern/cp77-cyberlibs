@@ -46,7 +46,11 @@ function style.formatFooter(itemsNumber)
             footer = footer .. string.format("\n[ Extracted %d data packets. ]", itemsNumber)
         end
     else
-        footer = "Items: " .. itemsNumber
+        footer = "----------------------------------------------------------------------------------"
+
+        if itemsNumber then
+            footer = footer .. "\nItems: " .. itemsNumber
+        end
     end
 
     return footer

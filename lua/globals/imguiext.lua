@@ -3,7 +3,7 @@
 -- (c) gramern 2024
 
 local ImGuiExt = {
-    __VERSION = { 0, 3, 0 },
+    __VERSION = { 0, 3, 1 },
 }
 
 local activeThemeName = "Default"
@@ -404,7 +404,7 @@ local function ShowNotification(isActive)
     var.notification.active = isActive
 end
 
----@param timeSeconds number
+---@param timeSeconds number -- `0` will set a permament notification until next change
 ---@param text string
 ---@param hideOnGameMenu boolean?
 ---@param screenPos ImVec2?
@@ -419,6 +419,7 @@ function ImGuiExt.SetNotification(timeSeconds, text, hideOnGameMenu, screenPos)
         var.notification.screenPos = nil
     end
 
+    if timeSeconds == 0 then return end
     utils.setDelay(timeSeconds, "Notification", ShowNotification, false)
 end
 

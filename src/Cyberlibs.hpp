@@ -6,7 +6,7 @@
 
 namespace CyberlibsCore
 {
-class Cyberlibs : Red::IScriptable
+class Cyberlibs
 {
 public:
     inline static Red::CString Version()
@@ -27,7 +27,8 @@ public:
     inline static void PrintExport(const Red::CString& fileNameOrPath, Red::Optional<bool> dump) {}
     inline static void PrintImport(const Red::CString& fileNameOrPath, Red::Optional<bool> dump) {}
     inline static void PrintIsLoaded(const Red::CString& fileNameOrPath, Red::Optional<bool> dump) {}
-    inline static void PrintLoadedModules(Red::Optional<bool> dump){}
+    inline static void PrintLoadedModules(Red::Optional<bool> dump) {}
+    inline static void PrintModuleInfo(const Red::CString& fileNameOrPath, Red::Optional<bool> dump) {}
     inline static void PrintVersion(const Red::CString& fileNameOrPath, Red::Optional<bool> dump) {}
 
     RTTI_IMPL_TYPEINFO(CyberlibsCore::Cyberlibs);
@@ -50,5 +51,6 @@ RTTI_DEFINE_CLASS(CyberlibsCore::Cyberlibs,
     RTTI_METHOD(PrintImport);
     RTTI_METHOD(PrintIsLoaded);
     RTTI_METHOD(PrintLoadedModules);
+    RTTI_METHOD(PrintModuleInfo);
     RTTI_METHOD(PrintVersion);
 });

@@ -12,6 +12,14 @@ local installedModsResources  = {
     parsed = {}
 }
 
+-- local modsFiles = {
+--     archive = {},
+--     cet = {},
+--     red4ext = {},
+--     redscript = {},
+--     tweaks = {}
+-- }
+
 local reports = {
     mods = {}
 }
@@ -98,6 +106,63 @@ local function checkModsResources()
     return installed
 end
 
+local function mapDirectory(relativePath)
+    relativePath = utils.normalizePath(relativePath)
+    local items = GameDiagnostics.ListDirectory(relativePath)
+
+    if not items then
+        return nil
+    end
+
+    local result = {}
+
+    for _, item in ipairs(items) do
+        if item.name ~= "__folder_managed_by_vortex" and item.name ~= ".stub" then
+            if item.type == "file" then
+                result[item.name] = {
+                    type = "file"
+                }
+            elseif item.type == "dir" then
+                local subPath
+
+                if relativePath == "" then
+                    subPath = item.name
+                else
+                    subPath = relativePath .. "/" .. item.name
+                end
+
+                result[item.name] = {
+                    type = "dir",
+                    contents = mapDirectory(subPath)
+                }
+            end
+        end
+    end
+
+    return result
+end
+
+local function getPaths(dirMap, currentPath, result)
+    result = result or {}
+    currentPath = currentPath or ""
+    
+    for name, item in pairs(dirMap) do
+        local path = currentPath == "" and name or currentPath .. "/" .. name
+        
+        if item.type == "file" then
+            table.insert(result, path)
+        elseif item.type == "dir" and item.contents then
+            getPaths(item.contents, path, result)
+        end
+    end
+    
+    if currentPath == "" then
+        table.sort(result)
+
+        return result
+    end
+end
+
 local function collectModsResourcesData()
     if not next(installedModsResources.parsed) then
         sortModsResources(checkModsResources())
@@ -161,16 +226,25 @@ local function dumpMods()
     text = text ..  "\n\n\n" .. style.formatHeader("RED4ext Mods / Unknown")
 
     local modAmount = 0
+    local mods = {}
 
     for _, module in ipairs(modules) do
         if module.category == "mod / unknown" then
-            text = text .. "\n" .. style.formatEntry(module.filePath ..
-                                                        utils.setStringCursor(module.filePath, 70, " ") ..
-                                                        "Version: " ..
-                                                        Cyberlibs.GetVersion(module.filePath))
-
-            modAmount = modAmount + 1
+            table.insert(mods, module)
         end
+    end
+
+    table.sort(mods, function(a, b)
+        return string.lower(a.filePath) < string.lower(b.filePath)
+    end)
+
+    for _, mod in ipairs(mods) do
+        text = text .. "\n" .. style.formatEntry(mod.filePath ..
+                                                    utils.setStringCursor(mod.filePath, 70, " ") ..
+                                                    "Version: " ..
+                                                    Cyberlibs.GetVersion(mod.filePath))
+
+        modAmount = modAmount + 1
     end
 
     text = text .. "\n" .. style.formatFooter(modAmount)
@@ -225,7 +299,7 @@ local function dumpMods()
     end
 
     text = text .. "\n" .. style.formatFooter(cetAmount)
-    text = text ..  "\n\n\n" .. style.formatHeader("Uninstalled CET Mods (Missing init.lua)")
+    text = text ..  "\n\n\n" .. style.formatHeader("Disabled CET Mods (Missing init.lua)")
 
     local missingCetAmount = 0
 
@@ -238,6 +312,45 @@ local function dumpMods()
     end
 
     text = text .. "\n" .. style.formatFooter(missingCetAmount)
+    text = text ..  "\n\n\n" .. style.formatHeader("Archives")
+
+    local archiveAmount = 0
+    local archiveModsPath = "archive/pc/mod"
+    local archiveModsDir = GameDiagnostics.ListDirectory(archiveModsPath)
+
+    for _, item in ipairs(archiveModsDir) do
+        if item.type == "file" and item.name ~= "__folder_managed_by_vortex" then
+            text = text .. "\n" .. style.formatEntry(item.name)
+
+            archiveAmount = archiveAmount + 1
+        end
+    end
+
+    text = text .. "\n" .. style.formatFooter(archiveAmount)
+    text = text ..  "\n\n\n" .. style.formatHeader("Tweaks")
+
+    local tweaksAmount = 0
+    local tweaksPath = "r6\\tweaks"
+    local tweaksPaths = getPaths(mapDirectory(tweaksPath))
+
+    for _, path in ipairs(tweaksPaths) do
+        text = text .. "\n" .. style.formatEntry(path)
+        tweaksAmount = tweaksAmount + 1
+    end
+
+    text = text .. "\n" .. style.formatFooter(tweaksAmount)
+    text = text ..  "\n\n\n" .. style.formatHeader("RedMods")
+
+    local redmodAmount = 0
+    local redmodPath = "mods"
+    local redmodPaths = getPaths(mapDirectory(redmodPath))
+
+    for _, path in ipairs(redmodPaths) do
+        text = text .. "\n" .. style.formatEntry(path)
+        redmodAmount = redmodAmount  + 1
+    end
+
+    text = text .. "\n" .. style.formatFooter(redmodAmount)
 
     text = text .. "\n\nEnd of Report."
 
@@ -247,6 +360,8 @@ local function dumpMods()
 end
 
 local function generateModsReport()
+    ImGuiExt.SetNotification(0, "Generating Mods Report...")
+
     local fileName = dumpMods()
 
     if fileName and isModsReport(fileName) then
@@ -257,7 +372,7 @@ local function generateModsReport()
     end
 end
 
--- local function drawFileExplorer()
+-- local function drawModsExplorer()
 --     ImGuiExt.TextAlt("In works...")
 -- end
 
@@ -349,13 +464,15 @@ local function draw()
     -- ImGui.Text("")
     -- ImGuiExt.AlignNextItemToCenter(300, contentRegionAvailX)
 
-    -- if ImGui.Button("Browse Game Files", 300, 0) then
-    --     ImGuiExt.AddTab("RootWindow.TabBar", "File Explorer", "", drawFileExplorer)
-
-    --     print("in works...")
+    -- if ImGui.Button("Browse Mods Files", 300, 0) then
+    --     ImGuiExt.AddTab("RootWindow.TabBar", "Mods Explorer", "", drawModsExplorer)
     -- end
 
     -- ImGui.Text("")
+end
+
+local function test()
+    print(Game.GetGameDiagnostics():IsFile("Cyberpunk2077.exe"))
 end
 
 local events = {}
@@ -367,9 +484,14 @@ end
 return {
     __NAME = "Game Diagnostics",
     __ICON = IconGlyphs.Stethoscope,
+    appApi = {
+        getPaths = getPaths,
+        mapDirectory = mapDirectory
+    },
     draw = draw,
     events = events,
     inputs = {
         { id = "generateModsReport", description = "Generate Mods Report", keyPressCallback = generateModsReport },
+        { id = "gettingTest", description = "testing", keyPressCallback = test }
     }
 }

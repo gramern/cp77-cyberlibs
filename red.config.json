@@ -4,7 +4,8 @@
   "license": true,
   "scripts": {
     "redscript": {
-      "src": "scripts"
+      "src": "scripts",
+      "output": "red4ext\\plugins\\"
     },
     "cet": {
       "src": "lua"

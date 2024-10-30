@@ -698,6 +698,35 @@ local function handleFiltering(searchInstanceName, export, import, exportLabel, 
     end
 end
 
+local function drawDumpMenuItems(fileName, filePath)
+    if ImGui.MenuItem(ImGuiExt.TextIcon("All")) then
+        Cyberlibs.PrintModuleInfo(filePath, true)
+        ImGuiExt.SetStatusBar("Info dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
+    end
+
+    ImGui.Separator()
+
+    if ImGui.MenuItem(ImGuiExt.TextIcon("Version")) then
+        Cyberlibs.PrintVersion(filePath, true)
+        ImGuiExt.SetStatusBar("Version dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
+    end
+
+    if ImGui.MenuItem(ImGuiExt.TextIcon("TimeDateStamp")) then
+        Cyberlibs.PrintAttribute(filePath, "TimeDateStamp", true)
+        ImGuiExt.SetStatusBar("TimeDateStamp dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
+    end
+
+    if ImGui.MenuItem(ImGuiExt.TextIcon("Export")) then
+        Cyberlibs.PrintExport(filePath, true)
+        ImGuiExt.SetStatusBar("Export dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
+    end
+
+    if ImGui.MenuItem(ImGuiExt.TextIcon("Import")) then
+        Cyberlibs.PrintImport(filePath, true)
+        ImGuiExt.SetStatusBar("Import dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
+    end
+end
+
 local function drawModuleTab(onScreenName, fileName, filePath)
     if getModule(onScreenName) == nil then
         openModule(onScreenName, fileName, filePath)
@@ -748,6 +777,14 @@ local function drawModuleTab(onScreenName, fileName, filePath)
         drawViewerRow("Load Address", opened["Load Address"], contentRegionAvailX, labelWidth)
         drawViewerRow("Mapped Size", opened["Mapped Size"], contentRegionAvailX, labelWidth)
         ImGui.Separator()
+        ImGui.Button(ImGuiExt.TextIcon("Dump Module's Info", IconGlyphs.PrinterOutline), contentRegionAvailX, 0)
+
+        if ImGui.BeginPopupContextItem("GameModules.ModuleTab.DumpPopup", ImGuiPopupFlags.MouseButtonLeft) then
+            drawDumpMenuItems(fileName, filePath)
+            ImGui.EndPopup()
+        end
+
+        ImGui.Separator()
         ImGui.Spacing()
     end
 
@@ -787,7 +824,9 @@ local function drawModuleTab(onScreenName, fileName, filePath)
 
     handleFiltering(searchInstanceName,  opened["Export"], opened["Import"], exportLabel, importLabel)
 
-    if widgetState[exportLabel].hovered == "" and
+    if widgetState[exportLabel].notCollapsed and
+        widgetState[importLabel].notCollapsed and
+        widgetState[exportLabel].hovered == "" and
         widgetState[importLabel].hovered == "" and
         not widgetState[exportLabel].isContextPopup and
         not widgetState[importLabel].isContextPopup then
@@ -959,12 +998,23 @@ local function drawSelectedModuleContextMenu(onScreenName, fileName, filePath)
 
         ImGui.Separator()
 
+        if ImGui.BeginMenu(ImGuiExt.TextIcon("Dump Module's Info", IconGlyphs.PrinterOutline)) then
+            drawDumpMenuItems(fileName, filePath)
+            ImGui.EndMenu()
+        end
+        
+        ImGui.Separator()
+
         if ImGui.MenuItem(ImGuiExt.TextIcon("Copy File Name", IconGlyphs.ContentCopy)) then
             ImGui.SetClipboardText(fileName)
         end
 
         if ImGui.MenuItem(ImGuiExt.TextIcon("Copy File Path", IconGlyphs.ContentCopy)) then
             ImGui.SetClipboardText(filePath)
+        end
+
+        if ImGui.MenuItem(ImGuiExt.TextIcon("Copy Normalized File Path", IconGlyphs.ContentCopy)) then
+            ImGui.SetClipboardText(utils.normalizePath(filePath))
         end
 
         ImGui.Separator()
@@ -1008,7 +1058,7 @@ local function draw()
     local scrollbarSize = ImGui.GetStyle().ScrollbarSize
     local itemWidth = windowWidth - 2 * windowPaddingX
     local cellHeight = textHeight + itemSpacing.y
-    local regionPos = {} -- widgetState.modulesList.regionPos
+    local regionPos = {}
 
     search.updateFilterInstance("GameModules.Root")
 
