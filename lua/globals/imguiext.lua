@@ -3,7 +3,7 @@
 -- (c) gramern 2024
 
 local ImGuiExt = {
-    __VERSION = { 0, 3, 1 },
+    __VERSION = { 0, 3, 2 },
 }
 
 local activeThemeName = "Default"
@@ -36,6 +36,8 @@ local statusBars = {
 }
 
 local tabBars = {}
+
+local tagBars = {}
 
 local var = {
     notification = { active = false, text = "", textWidth = 0 },
@@ -606,8 +608,8 @@ end
 
 ---@param tabBarLabel string
 ---@param tabLabel string
+---@param title string
 ---@param callback function
----@param title string?
 ---@return boolean
 function ImGuiExt.AddTab(tabBarLabel, tabLabel, title, callback, ...)
     if tabBars[tabBarLabel] == nil then
@@ -658,6 +660,53 @@ function ImGuiExt.SetActiveTab(tabBarLabel, tabLabel)
     end
 end
 
+local function onTabOpen(tabBar, tab, activeTab)
+    local tabFlags = tab.label == activeTab and ImGuiTabItemFlags.SetSelected or 0
+
+    tab.isOpen, tab.isActive = ImGui.BeginTabItem(tab.label, true, tabFlags)
+
+    if tab.isActive then
+        if tab.title ~= "" then
+            ImGuiExt.TextTitle(tab.title, 1.2, false, 75)
+        else
+            ImGui.Spacing()
+        end
+
+        if tab.callback and type(tab.callback) == "function" then
+            if tab.callbackParams then
+                tab.callback(unpack(tab.callbackParams))
+            else
+                tab.callback()
+            end
+        end
+
+        ImGui.EndTabItem()
+
+        tabBar.activeTab = tab.label
+    end
+end
+
+local function onTabClose(tabBar, tab, item)
+    tab.isOld = nil
+    tab.isOpen = nil
+    tab.isActive = nil
+    tabBar.activeTab = ""
+
+    for i, closedTab in ipairs(tabBar.recentlyClosedTabs) do
+        if closedTab.label == tab.label then
+            table.remove(tabBar.recentlyClosedTabs, i)
+            break
+        end
+    end
+
+    if #tabBar.recentlyClosedTabs > 20 then
+        table.remove(tabBar.recentlyClosedTabs, 1)
+    end
+
+    table.insert(tabBar.recentlyClosedTabs, tab)
+    tabBar.tabs[item] = nil
+end
+
 ---@param tabBarLabel string
 ---@param flags integer
 ---@return boolean
@@ -681,50 +730,11 @@ function ImGuiExt.TabBar(tabBarLabel, flags)
         if ImGui.BeginTabBar(tabBar.newLabel, flags) then
             for item, tab in pairs(tabBar.tabs) do
                 if item then
-                    local tabFlags = tab.label == activeTab and ImGuiTabItemFlags.SetSelected or 0
-
-                    tab.isOpen, tab.isActive = ImGui.BeginTabItem(tab.label, true, tabFlags)
-
-                    if tab.isActive then
-                        if tab.title ~= "" then
-                            ImGuiExt.TextTitle(tab.title, 1.2, false, 75)
-                        else
-                            ImGui.Spacing()
-                        end
-
-                        if tab.callback and type(tab.callback) == "function" then
-                            if tab.callbackParams then
-                                tab.callback(unpack(tab.callbackParams))
-                            else
-                                tab.callback()
-                            end
-                        end
-
-                        ImGui.EndTabItem()
-
-                        tabBar.activeTab = tab.label
-                    end
+                    onTabOpen(tabBar, tab, activeTab)
                 end
 
                 if not tab.isOpen then
-                    tab.isOld = nil
-                    tab.isOpen = nil
-                    tab.isActive = nil
-                    tabBar.activeTab = ""
-
-                    for i, closedTab in ipairs(tabBar.recentlyClosedTabs) do
-                        if closedTab.label == tab.label then
-                            table.remove(tabBar.recentlyClosedTabs, i)
-                            break
-                        end
-                    end
-
-                    if #tabBar.recentlyClosedTabs > 20 then
-                        table.remove(tabBar.recentlyClosedTabs, 1)
-                    end
-
-                    table.insert(tabBar.recentlyClosedTabs, tab)
-                    tabBar.tabs[item] = nil
+                    onTabClose(tabBar, tab, item)
                 end
             end
 
@@ -840,6 +850,90 @@ function ImGuiExt.BeginMenuOpenedTabs(menuLabel, tabBarLabel)
         end
 
         ImGui.EndMenu()
+    end
+end
+
+------------------
+-- Tag Bar
+------------------
+
+local function initializeTagBar(label)
+    tagBars[label] = {
+        breaks = {},
+        tags = {}
+    }
+end
+
+---@param tagBarLabel string
+---@param tagPosition integer
+---@param tagLabel string
+---@param callback function
+---@return boolean
+function ImGuiExt.AddTag(tagBarLabel, tagPosition, tagLabel, callback, ...)
+    if tagBars[tagBarLabel] == nil then
+        initializeTagBar(tagBarLabel)
+    end
+
+    local tag = {
+        label = tagLabel,
+        callback = callback
+    }
+
+    if ... ~= nil and type(...) == "table" then
+        tag.callbackParams = ...
+    else
+        tag.callbackParams = {...} or nil
+    end
+
+    table.insert(tagBars[tagBarLabel].tags, tagPosition, tag)
+
+    return true
+end
+
+---@param tagBarLabel string
+---@return boolean
+function ImGuiExt.IsTagBar(tagBarLabel)
+    if tagBars[tagBarLabel] == nil then return false end
+    if not next(tagBars[tagBarLabel].tags) then return false end
+
+    return true
+end
+
+local function onTagClick(tag)
+    if tag.callback and type(tag.callback) == "function" then
+        if tag.callbackParams then
+            tag.callback(unpack(tag.callbackParams))
+        else
+            tag.callback()
+        end
+    end
+end
+
+---@param tagBarLabel string
+---@param tagBarWidth number
+function ImGuiExt.TagBar(tagBarLabel, tagBarWidth)
+    if tagBars[tagBarLabel] == nil then
+        initializeTagBar(tagBarLabel)
+    end
+
+    local itemSpacing = ImGui.GetStyle().ItemSpacing
+    local framePadding = ImGui.GetStyle().FramePadding
+    local tagSpacing = (2 * framePadding.x) + itemSpacing.x
+    local tagsWidth = 0
+
+    for _, tag in ipairs(tagBars[tagBarLabel].tags) do
+        local tagWidth = ImGui.CalcTextSize(tag.label) + tagSpacing
+        tagsWidth = tagsWidth + tagWidth
+
+        if ImGui.SmallButton(tag.label) then
+            onTagClick(tag)
+        end
+
+        if tagsWidth <= tagBarWidth - tagWidth then
+            ImGui.SameLine()
+        else
+            tagsWidth = 0
+        end
     end
 end
 

@@ -228,12 +228,15 @@ local function initializeModSettings()
     end
 end
 
-local function openDefaultTab()
-    local gameModules = appModules.gameModules
+local function openDefaultTabs()
     local tabBarLabel = "RootWindow.TabBar"
 
-    if gameModules ~= nil and ImGuiExt.GetActiveTabLabel(tabBarLabel) == "" then
-        ImGuiExt.AddTab(tabBarLabel, gameModules.__NAME, gameModules.__TITLE, gameModules.draw)
+    for _, appModule in pairs(appModules) do
+        if appModule.openOnStart then
+            if ImGuiExt.GetActiveTabLabel(tabBarLabel) == "" then
+                ImGuiExt.AddTab(tabBarLabel, appModule.__NAME, appModule.__TITLE, appModule.draw)
+            end
+        end
     end
 end
 
@@ -582,6 +585,12 @@ local function drawRootPopupMenu()
             end
         end
 
+        if not next(appModules) then
+            ImGui.BeginDisabled()
+            ImGui.MenuItem(ImGuiExt.TextIcon("No AppModules Found."))
+            ImGui.EndDisabled()
+        end
+
         ImGui.Separator()
 
         if ImGui.MenuItem(ImGuiExt.TextIcon("Close Inactive Tabs", IconGlyphs.CloseBoxMultipleOutline)) then
@@ -736,7 +745,7 @@ registerForEvent("onOverlayOpen", function()
     settings.onOverlayOpen()
     ImGuiExt.onOverlayOpen()
     fireAppModulesEvents("onOverlayOpen")
-    openDefaultTab()
+    openDefaultTabs()
 end)
 
 registerForEvent("onOverlayClose", function()

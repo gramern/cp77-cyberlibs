@@ -240,7 +240,7 @@ local function dumpMods()
 
     for _, mod in ipairs(mods) do
         text = text .. "\n" .. style.formatEntry(mod.filePath ..
-                                                    utils.setStringCursor(mod.filePath, 70, " ") ..
+                                                    utils.setStringCursor(mod.filePath, 128, " ") ..
                                                     "Version: " ..
                                                     Cyberlibs.GetVersion(mod.filePath))
 
@@ -493,5 +493,6 @@ return {
     inputs = {
         { id = "generateModsReport", description = "Generate Mods Report", keyPressCallback = generateModsReport },
         { id = "gettingTest", description = "testing", keyPressCallback = test }
-    }
+    },
+    openOnStart = true
 }

@@ -16,7 +16,7 @@ local modules = {
     data = {},
     filtered = {},
     loaded = {},
-    selected = {}
+    selected = {},
 }
 
 local widgetState = {
@@ -28,9 +28,7 @@ local widgetState = {
             return settings.getUserSetting("gameModules", "importNodesCharThreshold") or 3
         end,
     },
-    modulesList = {
-        regionPos = {}
-    }
+    modulesList = {}
 }
 
 local function intializeCategoriesCount()
@@ -106,9 +104,55 @@ local function categorizeModules(loadedModules)
         end
     end
     
-    logger.debug(modules.count.all, "Categorized loaded modules.")
+    logger.debug(modules.count.all, "loaded modules categorized.")
 
     return loadedModules
+end
+
+local function createCategoryTags()
+    widgetState.modulesList.categoryTags = {
+        {
+            label = "total: " .. modules.count.all,
+            callback = function()
+                search.serFilterQuery("GameModules.Root", "")
+            end
+        },
+        {
+            label = "system: " .. modules.count["system"],
+            callback = function()
+                search.serFilterQuery("GameModules.Root", "system")
+                search.setFiltering(true)
+            end
+        },
+        {
+            label = "native: " .. modules.count["native"],
+            callback = function()
+                search.serFilterQuery("GameModules.Root", "native")
+                search.setFiltering(true)
+            end
+        },
+        {
+            label = "redmod: " .. modules.count["redmod"],
+            callback = function()
+                search.serFilterQuery("GameModules.Root", "redmod")
+                search.setFiltering(true)
+            end
+        },
+        {
+            label = "mods resource: " .. modules.count["mods resource"],
+            callback = function()
+                search.serFilterQuery("GameModules.Root", "mods resource")
+                search.setFiltering(true)
+            end
+        },
+        {
+            label = "mod / unknown: " .. modules.count["mod / unknown"],
+            callback = function()
+                search.serFilterQuery("GameModules.Root", "mod / unknown")
+                search.setFiltering(true)
+            end
+        }
+    }
 end
 
 local function getModules()
@@ -1133,56 +1177,17 @@ local function draw()
     local contentRegionAvailX = ImGui.GetContentRegionAvail()
 
     if next(modules.count) then
-        if ImGui.SmallButton("total: " .. modules.count.all) then
-            search.serFilterQuery("GameModules.Root", "")
+        if not widgetState.modulesList.categoryTags then
+            createCategoryTags()
         end
 
-        local countBarWidth = ImGui.GetItemRectSize()
-
-        ImGui.SameLine()
-
-        if ImGui.SmallButton("system: " .. modules.count["system"]) then
-            search.serFilterQuery("GameModules.Root", "system")
-            search.setFiltering(true)
+        if not ImGuiExt.IsTagBar("GameModules.ModulesList.Tags") then
+            for i, tag in ipairs(widgetState.modulesList.categoryTags) do
+                ImGuiExt.AddTag("GameModules.ModulesList.Tags", i, tag.label, tag.callback)
+            end
         end
 
-        countBarWidth = countBarWidth + ImGui.GetItemRectSize()
-
-        ImGui.SameLine()
-
-        if ImGui.SmallButton("native: " .. modules.count["native"]) then
-            search.serFilterQuery("GameModules.Root", "native")
-            search.setFiltering(true)
-        end
-
-        countBarWidth = countBarWidth + ImGui.GetItemRectSize()
-
-        ImGui.SameLine()
-
-        if ImGui.SmallButton("redmod: " .. modules.count["redmod"]) then
-            search.serFilterQuery("GameModules.Root", "redmod")
-            search.setFiltering(true)
-        end
-
-        countBarWidth = countBarWidth + ImGui.GetItemRectSize()
-
-        ImGui.SameLine()
-
-        if ImGui.SmallButton("mods resource: " .. modules.count["mods resource"]) then
-            search.serFilterQuery("GameModules.Root", "mods resource")
-            search.setFiltering(true)
-        end
-
-        countBarWidth = countBarWidth + ImGui.GetItemRectSize()
-
-        if countBarWidth < contentRegionAvailX * 0.7 then
-            ImGui.SameLine()
-        end
-
-        if ImGui.SmallButton("mod / unknown: " .. modules.count["mod / unknown"]) then
-            search.serFilterQuery("GameModules.Root", "mod / unknown")
-            search.setFiltering(true)
-        end
+        ImGuiExt.TagBar("GameModules.ModulesList.Tags", contentRegionAvailX)
     end
 
     ImGui.Spacing()
@@ -1254,7 +1259,8 @@ return {
     },
     draw = draw,
     drawSettings = drawSettings,
-    events = events
+    events = events,
+    openOnStart = true
 }
 
 -- return {
@@ -1274,4 +1280,5 @@ return {
 --     inputs = {
 --         { id = "exampleInput", description = "Describe Action", keyPressCallback = functionOnKeyPress, keyReleaseCallback = functionOnKeyRelease },
 --     } -- optional
+--     openOnStart = true -- optional
 -- }

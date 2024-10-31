@@ -177,7 +177,7 @@ function publicApi.PrintAttribute(fileNameOrPath, attribute, dump)
             local fileName = utils.getFileName(fileNameOrPath)
 
             GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-" .. attribute .. ".txt", result)
-            logger.info("Requested data dumped to ..\\_PARSED_DATA\\" .. fileName)
+            logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
         end
 
         return
@@ -237,7 +237,7 @@ function publicApi.PrintExport(fileNameOrPath, dump)
         local fileName = utils.getFileName(fileNameOrPath)
 
         GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-Export.txt", result)
-        logger.info("Requested data dumped to ..\\_PARSED_DATA\\" .. fileName)
+        logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
     end
 end
 
@@ -277,7 +277,7 @@ function publicApi.PrintImport(fileNameOrPath, dump)
         local fileName = utils.getFileName(fileNameOrPath)
 
         GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-Import.txt", result)
-        logger.info("Requested data dumped to ..\\_PARSED_DATA\\" .. fileName)
+        logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
     end
 end
 
@@ -300,7 +300,7 @@ function publicApi.PrintIsLoaded(fileNameOrPath, dump)
         local fileName = utils.getFileName(fileNameOrPath)
 
         GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-IsLoaded-" .. GameDiagnostics.GetCurrentTimeDate(true) .. ".txt", result)
-        logger.info("Requested data dumped to ..\\_PARSED_DATA\\" .. fileName)
+        logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
     end
 end
 
@@ -356,7 +356,7 @@ function publicApi.PrintVersion(fileNameOrPath, dump)
         local fileName = utils.getFileName(fileNameOrPath)
 
         GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-Version.txt", result)
-        logger.info("Requested data dumped to ..\\_PARSED_DATA\\" .. fileName)
+        logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
     end
 end
 
@@ -390,7 +390,7 @@ function publicApi.PrintModuleInfo(fileNameOrPath, dump)
         local fileName = utils.getFileName(fileNameOrPath)
 
         GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-ModuleInfo.txt", result)
-        logger.info("Requested data dumped to ..\\_PARSED_DATA\\" .. fileName)
+        logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
     end
 end
 
