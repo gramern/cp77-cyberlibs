@@ -8,15 +8,16 @@ local tables = require("globals/tables")
 local utils = require("globals/utils")
 
 local modsResources = require("knowledgeBase/modsResources")
-local native = require("knowledgeBase/native")
-local redmod = require("knowledgeBase/redmod")
+local natives = require("knowledgeBase/natives")
+local redmodBinaries = require("knowledgeBase/redmodBinaries")
 
 local modules = {
     count = {},
     data = {},
     filtered = {},
     loaded = {},
-    selected = {},
+    pool = {},
+    selected = {}
 }
 
 local widgetState = {
@@ -30,130 +31,6 @@ local widgetState = {
     },
     modulesList = {}
 }
-
-local function intializeCategoriesCount()
-    modules.count = {
-        all = 0,
-        ["mod / unknown"] = 0,
-        ["mods resource"] = 0,
-        ["native"] = 0,
-        ["redmod"] = 0,
-        ["system"] = 0
-    }
-end
-
-local function isModsResource(normalizedPath, modsResourcesSet)
-    for resourcePath in pairs(modsResourcesSet) do
-        if normalizedPath:sub(-#resourcePath) == resourcePath then
-            return true
-        end
-    end
-
-    return false
-end
-
-local function isNativeModule(normalizedPath, nativeSet)
-    for nativePath in pairs(nativeSet) do
-        if normalizedPath:sub(-#nativePath) == nativePath then
-            return true
-        end
-    end
-
-    return false
-end
-
-local function categorizeModules(loadedModules)
-    if loadedModules == nil then return {} end
-
-    local modsResourcesTable = modsResources.getTable()
-    local nativeTable = native.getTable()
-    local redmodTable = redmod.getTable()
-    local modsResourcesSet = {}
-    local nativeSet = {}
-    local redmodSet = {}
-
-    intializeCategoriesCount()
-
-    modules.count.all = #loadedModules
-
-    for _, v in ipairs(nativeTable) do nativeSet[utils.normalizePath(v)] = true end
-    for _, v in ipairs(redmodTable) do redmodSet[utils.normalizePath(v)] = true end
-
-    for _, path in pairs(modsResourcesTable) do
-        modsResourcesSet[utils.normalizePath(path):lower()] = true
-    end
-  
-    for _, module in ipairs(loadedModules) do
-        local normalizedPath = module.normalizedPath:lower()
-        
-        if module.normalizedPath:find("windows") then
-            module.category = "system"
-            modules.count["system"] = modules.count["system"] + 1
-        elseif isNativeModule(normalizedPath, nativeSet) then
-            module.category = "native"
-            modules.count["native"] = modules.count["native"] + 1
-        elseif isNativeModule(normalizedPath, redmodSet) then
-            module.category = "redmod"
-            modules.count["redmod"] = modules.count["redmod"] + 1
-        elseif isModsResource(normalizedPath, modsResourcesSet) then
-            module.category = "mods resource"
-            modules.count["mods resource"] = modules.count["mods resource"] + 1
-        else
-            module.category = "mod / unknown"
-            modules.count["mod / unknown"] = modules.count["mod / unknown"] + 1
-        end
-    end
-    
-    logger.debug(modules.count.all, "loaded modules categorized.")
-
-    return loadedModules
-end
-
-local function createCategoryTags()
-    widgetState.modulesList.categoryTags = {
-        {
-            label = "total: " .. modules.count.all,
-            callback = function()
-                search.serFilterQuery("GameModules.Root", "")
-            end
-        },
-        {
-            label = "system: " .. modules.count["system"],
-            callback = function()
-                search.serFilterQuery("GameModules.Root", "system")
-                search.setFiltering(true)
-            end
-        },
-        {
-            label = "native: " .. modules.count["native"],
-            callback = function()
-                search.serFilterQuery("GameModules.Root", "native")
-                search.setFiltering(true)
-            end
-        },
-        {
-            label = "redmod: " .. modules.count["redmod"],
-            callback = function()
-                search.serFilterQuery("GameModules.Root", "redmod")
-                search.setFiltering(true)
-            end
-        },
-        {
-            label = "mods resource: " .. modules.count["mods resource"],
-            callback = function()
-                search.serFilterQuery("GameModules.Root", "mods resource")
-                search.setFiltering(true)
-            end
-        },
-        {
-            label = "mod / unknown: " .. modules.count["mod / unknown"],
-            callback = function()
-                search.serFilterQuery("GameModules.Root", "mod / unknown")
-                search.setFiltering(true)
-            end
-        }
-    }
-end
 
 local function getModules()
     local loadedPaths = GameModules and GameModules.GetLoadedModules() or nil
@@ -187,13 +64,166 @@ local function getModules()
     return loadedModules
 end
 
-local function getCategorizedModules()
-    return categorizeModules(getModules())
+local function intializeTagsCount()
+    modules.count = {
+        all = 0,
+        ["mods resource"] = 0,
+        ["mod"] = 0,
+        ["native"] = 0,
+        ["red4ext"] = 0,
+        ["redmod binary"] = 0,
+        ["system"] = 0,
+        ["unknown"] = 0,
+    }
+end
+
+local function isModuleTag(normalizedPath, set)
+    for path in pairs(set) do
+        if normalizedPath:sub(-#path) == path then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function tagModules(loadedModules)
+    if loadedModules == nil then return {} end
+
+    local modsResourcesTable = modsResources.getTable()
+    local nativesTable = natives.getTable()
+    local redmodBinariesTable = redmodBinaries.getTable()
+    local modsResourcesSet = {}
+    local nativesSet = {}
+    local redmodBinariesSet = {}
+
+    intializeTagsCount()
+
+    modules.count.all = #loadedModules
+
+    for _, v in ipairs(nativesTable) do nativesSet[utils.normalizePath(v)] = true end
+    for _, v in ipairs(redmodBinariesTable) do redmodBinariesSet[utils.normalizePath(v)] = true end
+
+    for _, path in pairs(modsResourcesTable) do
+        modsResourcesSet[utils.normalizePath(path):lower()] = true
+    end
+  
+    for _, module in ipairs(loadedModules) do
+        local normalizedPath = module.normalizedPath:lower()
+        module.tags = {}
+        
+        if string.find(normalizedPath, "windows") then
+            table.insert(module.tags, "system")
+            modules.count["system"] = modules.count["system"] + 1
+        elseif isModuleTag(normalizedPath, nativesSet) then
+            table.insert(module.tags, "native")
+            modules.count["native"] = modules.count["native"] + 1
+        elseif isModuleTag(normalizedPath, redmodBinariesSet) then
+            table.insert(module.tags, "redmod binary")
+            modules.count["redmod"] = modules.count["redmod"] + 1
+        elseif string.find(normalizedPath, "red4ext") then
+            table.insert(module.tags, "red4ext")
+            modules.count["red4ext"] = modules.count["red4ext"] + 1
+
+            if isModuleTag(normalizedPath, modsResourcesSet) then
+                table.insert(module.tags, "mods resource")
+                modules.count["mods resource"] = modules.count["mods resource"] + 1
+            else
+                table.insert(module.tags, "mod")
+                modules.count["mod"] = modules.count["mod"] + 1
+            end
+        elseif isModuleTag(normalizedPath, modsResourcesSet) then
+            table.insert(module.tags, "mods resource")
+            modules.count["mods resource"] = modules.count["mods resource"] + 1
+        else
+            table.insert(module.tags, "unknown")
+            modules.count["unknown"] = modules.count["unknown"] + 1
+        end
+    end
+    
+    logger.debug(modules.count.all, "loaded modules tagged.")
+
+    return loadedModules
+end
+
+local function findTag(tag)
+    if tag == "" or not tag then
+        modules.pool = modules.loaded
+
+        return
+    end
+
+    modules.pool = {}
+
+    for _, module in ipairs(modules.loaded) do
+        for _, value in ipairs(module.tags) do
+            if value == tag then
+                table.insert(modules.pool, module)
+            end
+        end
+    end
+end
+
+local function createTags()
+    widgetState.modulesList.tags = {
+        {
+            label = "total: " .. modules.count.all,
+            callback = function()
+                modules.pool = modules.loaded
+            end
+        },
+        {
+            label = "system: " .. modules.count["system"],
+            callback = function()
+                findTag("system")
+            end
+        },
+        {
+            label = "native: " .. modules.count["native"],
+            callback = function()
+                findTag("native")
+            end
+        },
+        {
+            label = "redmod binary: " .. modules.count["redmod binary"],
+            callback = function()
+                findTag("redmod binary")
+            end
+        },
+        {
+            label = "red4ext: " .. modules.count["red4ext"],
+            callback = function()
+                findTag("red4ext")
+            end
+        },
+        {
+            label = "mods resource: " .. modules.count["mods resource"],
+            callback = function()
+                findTag("mods resource")
+            end
+        },
+        {
+            label = "mod: " .. modules.count["mod"],
+            callback = function()
+                findTag("mod")
+            end
+        },
+        {
+            label = "unknown: " .. modules.count["unknown"],
+            callback = function()
+                findTag("unknown")
+            end
+        }
+    }
+end
+
+local function getTaggedModules()
+    return tagModules(getModules())
 end
 
 local function refreshLoadedModules()
     modules.data = {}
-    modules.loaded = getCategorizedModules()
+    modules.loaded = getTaggedModules()
 end
 
 local function getModule(onScreenName)
@@ -255,13 +285,15 @@ local function openModule(onScreenName, fileName, filePath)
     logger.debug("Opened module:", filePath, "On-screen name:", onScreenName)
 end
 
-local function selectModule(onScreenName, fileName, filePath)
+local function selectModule(module)
+    local onScreenName = module.onScreenName
+
     for selectableModule, _ in pairs(modules.selected) do
         modules.selected[selectableModule] = (selectableModule == onScreenName)
     end
-    
+
     if modules.selected[onScreenName] then
-        openModule(onScreenName, fileName, filePath)
+        openModule(onScreenName, module.fileName, module.filePath)
         modules.previewed = onScreenName
     end
 end
@@ -1026,7 +1058,7 @@ local function addModuleTab(onScreenName, fileName, filePath)
     ImGuiExt.AddTab("RootWindow.TabBar", onScreenName, "", drawModuleTab, onScreenName, fileName, filePath)
 end
 
-local function drawSelectedModuleContextMenu(onScreenName, fileName, filePath)
+local function drawSelectedModuleContextMenu(module)
     if ImGui.IsPopupOpen("GameModules.SelectedModule.PopupMenu") then
         widgetState.__global.isContextPopup = true
     else
@@ -1037,28 +1069,28 @@ local function drawSelectedModuleContextMenu(onScreenName, fileName, filePath)
 
     if ImGui.BeginPopup("GameModules.SelectedModule.PopupMenu") then
         if ImGui.MenuItem(ImGuiExt.TextIcon("Show in new tab", IconGlyphs.OpenInNew)) then
-            addModuleTab(onScreenName, fileName, filePath)
+            addModuleTab(module.onScreenName, module.fileName, module.filePath)
         end
 
         ImGui.Separator()
 
         if ImGui.BeginMenu(ImGuiExt.TextIcon("Dump Module's Info", IconGlyphs.PrinterOutline)) then
-            drawDumpMenuItems(fileName, filePath)
+            drawDumpMenuItems(module.fileName, module.filePath)
             ImGui.EndMenu()
         end
         
         ImGui.Separator()
 
         if ImGui.MenuItem(ImGuiExt.TextIcon("Copy File Name", IconGlyphs.ContentCopy)) then
-            ImGui.SetClipboardText(fileName)
+            ImGui.SetClipboardText(module.fileName)
         end
 
         if ImGui.MenuItem(ImGuiExt.TextIcon("Copy File Path", IconGlyphs.ContentCopy)) then
-            ImGui.SetClipboardText(filePath)
+            ImGui.SetClipboardText(module.filePath)
         end
 
         if ImGui.MenuItem(ImGuiExt.TextIcon("Copy Normalized File Path", IconGlyphs.ContentCopy)) then
-            ImGui.SetClipboardText(utils.normalizePath(filePath))
+            ImGui.SetClipboardText(utils.normalizePath(module.filePath))
         end
 
         ImGui.Separator()
@@ -1075,21 +1107,21 @@ local function drawSelectedModuleContextMenu(onScreenName, fileName, filePath)
     ImGui.PopStyleColor()
 end
 
-local function handleHoveredModule(regionPos, regionSize, onScreenName, fileName, filePath)
+local function handleHoveredModule(regionPos, regionSize, module)
     if ImGuiExt.IsMouseClickOverRegion(regionPos, regionSize, ImGuiMouseButton.Right) then
-        selectModule(onScreenName, fileName, filePath)
+        selectModule(module)
         ImGui.OpenPopup("GameModules.SelectedModule.PopupMenu")
     end
 end
 
-local function handleSelectedModule(regionPos, regionSize, onScreenName, fileName, filePath)
+local function handleSelectedModule(regionPos, regionSize, module)
     if ImGuiExt.IsMouseClickOverRegion(regionPos, regionSize, ImGuiMouseButton.Left) then
-        addModuleTab(onScreenName, fileName, filePath)
+        addModuleTab(module.onScreenName, module.fileName, module.filePath)
     elseif ImGuiExt.IsMouseClickOverRegion(regionPos, regionSize, ImGuiMouseButton.Right) then
         ImGui.OpenPopup("GameModules.SelectedModule.PopupMenu")
     end
 
-    drawSelectedModuleContextMenu(onScreenName, fileName, filePath)
+    drawSelectedModuleContextMenu(module)
 end
 
 local function draw()
@@ -1107,13 +1139,13 @@ local function draw()
     search.updateFilterInstance("GameModules.Root")
 
     if search.getFilterQuery("GameModules.Root") == "" then
-        modules.filtered = modules.loaded
+        modules.filtered = modules.pool
     else
         if ImGuiExt.IsSearchInputTyped(search.getActiveFilter().label) then
             search.setFiltering(true)
         end
 
-        modules.filtered = search.filter("GameModules.Root", modules.loaded, search.getFilterQuery("GameModules.Root"))
+        modules.filtered = search.filter("GameModules.Root", modules.pool, search.getFilterQuery("GameModules.Root"))
     end
 
     local itemColumnWidth = itemWidth / 2 + (scrollbarSize / 2)
@@ -1123,7 +1155,7 @@ local function draw()
     ImGui.Separator()
     ImGuiExt.TextTitle("Module", 1, true)
     ImGui.NextColumn()
-    ImGuiExt.TextTitle("Category", 1, true)
+    ImGuiExt.TextTitle("Tag", 1, true)
     ImGui.NextColumn()
     ImGui.Separator()
     ImGui.Columns(1)
@@ -1135,15 +1167,17 @@ local function draw()
     ImGui.SetColumnWidth(0, itemColumnWidth - windowPaddingX)
 
     for _, module in ipairs(modules.filtered) do
-        if modules.selected[module.onScreenName] == nil then
-            modules.selected[module.onScreenName] = false
+        local onScreenName = module.onScreenName
+
+        if modules.selected[onScreenName] == nil then
+            modules.selected[onScreenName] = false
         end
 
         regionPos.x, regionPos.y = ImGui.GetCursorScreenPos()
         regionPos.y = regionPos.y - (itemSpacing.y / 2)
         local regionSize = ImVec2.new(itemWidth, cellHeight)
 
-        if modules.selected[module.onScreenName] == true or
+        if modules.selected[onScreenName] == true or
             not widgetState.__global.isContextPopup and ImGuiExt.IsMouseHoverOverRegion(regionPos, regionSize) then
 
             ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor("text"))
@@ -1151,20 +1185,31 @@ local function draw()
             ImGui.PushStyleColor(ImGuiCol.Text, ImGuiExt.GetActiveThemeColor("textAlt"))
         end
 
-        if ImGui.Selectable(module.onScreenName, modules.selected[module.onScreenName],
+        if ImGui.Selectable(onScreenName, modules.selected[onScreenName],
                                                 ImGuiSelectableFlags.SpanAllColumns) then
-            selectModule(module.onScreenName, module.fileName, module.filePath)
+            selectModule(module)
         end
 
         ImGui.NextColumn()
-        ImGui.Text(module.category)
+        
+        local tags
+
+        for _, tag in ipairs(module.tags) do
+            if tags == nil then
+                tags = tag
+            else
+                tags = tags .. ", " .. tag
+            end
+        end
+
+        ImGui.Text(tags)
         ImGui.NextColumn()
         ImGui.PopStyleColor()
 
-        if modules.selected[module.onScreenName] == true then
-            handleSelectedModule(regionPos, regionSize, module.onScreenName, module.fileName, module.filePath)
+        if modules.selected[onScreenName] == true then
+            handleSelectedModule(regionPos, regionSize, module)
         else
-            handleHoveredModule(regionPos, regionSize, module.onScreenName, module.fileName, module.filePath)
+            handleHoveredModule(regionPos, regionSize, module)
         end
     end
 
@@ -1177,12 +1222,13 @@ local function draw()
     local contentRegionAvailX = ImGui.GetContentRegionAvail()
 
     if next(modules.count) then
-        if not widgetState.modulesList.categoryTags then
-            createCategoryTags()
+        if not widgetState.modulesList.tags then
+            createTags()
+            findTag("")
         end
 
         if not ImGuiExt.IsTagBar("GameModules.ModulesList.Tags") then
-            for i, tag in ipairs(widgetState.modulesList.categoryTags) do
+            for i, tag in ipairs(widgetState.modulesList.tags) do
                 ImGuiExt.AddTag("GameModules.ModulesList.Tags", i, tag.label, tag.callback)
             end
         end
@@ -1239,12 +1285,6 @@ end
 
 local events = {}
 
-function events.onInit()
-    if not app.isCyberlibsDLL() then
-        logger.warning("Install Cyberlibs RED4ext Plugin.")
-    end
-end
-
 function events.onOverlayOpen()
     refreshLoadedModules()
 end
@@ -1254,8 +1294,8 @@ return {
     __ICON = IconGlyphs.Bookshelf,
     appApi = {
         addModuleTab = addModuleTab,
-        getCategorizedModules = getCategorizedModules,
-        getLoadedModules = getModules
+        getTaggedModules = getTaggedModules,
+        getModules = getModules
     },
     draw = draw,
     drawSettings = drawSettings,

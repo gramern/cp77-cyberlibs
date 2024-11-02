@@ -1,4 +1,4 @@
-local redmod = {}
+local redmodBinaries = {}
 
 local t = nil
 
@@ -23,7 +23,7 @@ local function intializeTable()
     }
 end
 
-function redmod.getTable()
+function redmodBinaries.getTable()
     if t == nil then
         t = intializeTable()
     end
@@ -31,4 +31,4 @@ function redmod.getTable()
     return t
 end
 
-return redmod
+return redmodBinaries

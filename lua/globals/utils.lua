@@ -124,27 +124,29 @@ end
 -- Files, Paths
 ------------------
 
----@param path string
-function utils.getFileName(path)
-    path = path:match("^%[%[(.*)%]%]$") or path
+---@param filePath string
+function utils.getFileName(filePath)
+    filePath = filePath:match("^%[%[(.*)%]%]$") or filePath
 
-    return path:match(".*[/\\](.+)$") or path
+    return filePath:match(".*[/\\](.+)$") or filePath
 end
 
----@param path string
----@param removeDriveLetter boolean?
+---@param fileName string
 ---@return string
-function utils.normalizePath(path, removeDriveLetter)
-    path = path:gsub("\\", "/")
-    path = path:lower()
+function utils.removeHashPrefix(fileName)
+    local start = string.find(fileName, "[^#%-]")
 
-    if removeDriveLetter then
-        path = path:gsub("^%a:", "")
-    end
+    return start and string.sub(fileName, start) or fileName
+end
 
-    path = path:gsub("^/", "")
+---@param filePath string
+---@return string
+function utils.getPath(filePath)
+    filePath = filePath:match("^%[%[(.*)%]%]$") or filePath
 
-    return path
+    local dirPath = filePath:match("^(.+)[/\\][^/\\]*$")
+
+    return dirPath or ""
 end
 
 ---@param path string
@@ -195,6 +197,34 @@ function utils.isValidPath(path)
     end
 
     return components > 0
+end
+
+---@param path string
+---@param removeDriveLetter boolean?
+---@return string
+function utils.normalizePath(path, removeDriveLetter)
+    path = path:gsub("\\", "/")
+    path = path:lower()
+
+    if removeDriveLetter then
+        path = path:gsub("^%a:", "")
+    end
+
+    path = path:gsub("^/", "")
+
+    return path
+end
+
+---@param filePath string
+---@return string
+function utils.getLastDirectoryName(filePath)
+    local dirPath = utils.getPath(filePath)
+
+    if dirPath == "" then
+        return ""
+    end
+    
+    return utils.getFileName(dirPath)
 end
 
 ------------------

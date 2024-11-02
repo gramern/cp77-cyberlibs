@@ -1,4 +1,4 @@
-local native = {}
+local natives = {}
 
 local t = nil
 
@@ -96,7 +96,7 @@ local function intializeTable()
     }
 end
 
-function native.getTable()
+function natives.getTable()
     if t == nil then
         t = intializeTable()
     end
@@ -104,4 +104,4 @@ function native.getTable()
     return t
 end
 
-return native
+return natives

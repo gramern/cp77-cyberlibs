@@ -3,7 +3,7 @@ Cyberlibs = {
     __EDITION = nil,
     __VERSION = { 0, 2, 0 },
     __VERSION_SUFFIX = nil,
-    __VERSION_STATUS = "beta2",
+    __VERSION_STATUS = "beta3",
     __DESCRIPTION = "A mods resource and on-runtime diagnostics tool for Cyberpunk 2077.",
     __LICENSE =
         [[
@@ -32,6 +32,7 @@ Cyberlibs = {
 }
 
 local isRootWindow = false
+local isDLL = true
 
 ------------------
 -- Globals
@@ -73,11 +74,6 @@ function appApi.isRootWindow()
     return isRootWindow
 end
 
----@return boolean
-function appApi.isCyberlibsDLL()
-    return type(GameModules) ~= "nil"
-end
-
 ---@param moduleFolderName string
 ---@return boolean
 function appApi.isAppModule(moduleFolderName)
@@ -110,13 +106,18 @@ end
 ------------------
 
 local function verifyAppModule(path)
-    local moduleFile = loadfile(path)(appApi)
+    local moduleFile = loadfile(path .. "/main.lua")
 
-    if moduleFile.__NAME and
-        moduleFile.draw and
-        type(moduleFile.draw) == "function" then
+    if  not moduleFile then return nil end
 
-        return moduleFile
+    local module = moduleFile(appApi)
+
+    if module and
+        module.__NAME and
+        module.draw and
+        type(module.draw) == "function" then
+
+        return module
     end
 end
 
@@ -132,7 +133,7 @@ local function registerAppModules()
     local modulesDir = dir("appModules")
 
     for _, folder in pairs(modulesDir) do
-        local modulePath = "appModules/" .. folder.name .. "/main.lua"
+        local modulePath = "appModules/" .. folder.name
         local loadedModule = verifyAppModule(modulePath)
 
         if loadedModule ~= nil then
@@ -664,6 +665,24 @@ local function getTabBarFlags()
     return tabBarFlags
 end
 
+local function drawDLLRequest(resolutionFactor, windowWidth, windowPadding)
+    local infoText = "Install Cyberlibs RED4ext plugin to use the app."
+
+    ImGui.Dummy(100, 30 * resolutionFactor)
+    ImGuiExt.AlignNextItemToCenter(ImGui.CalcTextSize(infoText), windowWidth, windowPadding.x)
+    ImGuiExt.TextAlt(infoText)
+    ImGui.Dummy(100, 30 * resolutionFactor)
+end
+
+local function drawEmptyTabBar(resolutionFactor, windowWidth, windowPadding)
+    local infoText = "Open a Cyberlibs module to start."
+
+    ImGui.Dummy(100, 30 * resolutionFactor)
+    ImGuiExt.AlignNextItemToCenter(ImGui.CalcTextSize(infoText), windowWidth, windowPadding.x)
+    ImGuiExt.TextAlt(infoText)
+    ImGui.Dummy(100, 30 * resolutionFactor)
+end
+
 local function drawRootWindow()
     local activeTabLabel = ImGuiExt.GetActiveTabLabel("RootWindow.TabBar")
 
@@ -684,7 +703,10 @@ local function drawRootWindow()
         local itemSpacing = ImGui.GetStyle().ItemSpacing
         local dotsWidth = ImGui.CalcTextSize(IconGlyphs.DotsVertical)
         local regionPos = {}
-        local dummyText = "Open a Cyberlibs module to start."
+
+        if not isDLL then
+            drawDLLRequest(resolutionFactor, windowWidth, windowPadding)
+        end
 
         activeFilter.query = ImGuiExt.SearchInput(activeFilter.label,
                                                     activeFilter.query,
@@ -703,10 +725,7 @@ local function drawRootWindow()
         regionPos.x, regionPos.y = ImGui.GetCursorScreenPos()
 
         if not ImGuiExt.TabBar("RootWindow.TabBar", getTabBarFlags()) then
-            ImGui.Dummy(100, 30 * resolutionFactor)
-            ImGuiExt.AlignNextItemToCenter(ImGui.CalcTextSize(dummyText), windowWidth, windowPadding.x)
-            ImGuiExt.TextAlt(dummyText)
-            ImGui.Dummy(100, 30 * resolutionFactor)
+            drawEmptyTabBar(resolutionFactor, windowWidth, windowPadding)
         end
 
         local regionSize = ImVec2.new(windowWidth, 8 * resolutionFactor)
@@ -736,6 +755,12 @@ registerForEvent("onInit", function()
     logger.setDebug(settings.getModSetting("debugMode"))
     style.setEnabled(settings.getModSetting("stylizePrints"))
     ImGuiExt.onInit(settings.getModSetting("windowTheme"), Cyberlibs.Version())
+
+    if type(GameModules) ~= "userdata" then
+        isDLL = false
+        return
+    end
+
     fireAppModulesEvents("onInit")
 end)
 
@@ -744,6 +769,9 @@ registerForEvent("onOverlayOpen", function()
 
     settings.onOverlayOpen()
     ImGuiExt.onOverlayOpen()
+
+    if not isDLL then return end
+
     fireAppModulesEvents("onOverlayOpen")
     openDefaultTabs()
 end)
@@ -753,11 +781,16 @@ registerForEvent("onOverlayClose", function()
 
     search.flushBrowse()
     search.flushFilter()
+
+    if not isDLL then return end
+
     fireAppModulesEvents("onOverlayClose")
     settings.onOverlayClose()
 end)
 
 registerForEvent("onUpdate", function(deltaTime)
+    if not isDLL then return end
+
     utils.updateDelays(deltaTime)
     fireAppModulesEvents("onUpdate", deltaTime)
 end)
@@ -768,6 +801,8 @@ registerForEvent("onDraw", function()
     if isRootWindow then
         drawRootWindow()
     end
+
+    if not isDLL then return end
 
     fireAppModulesEvents("onDraw")
 end)

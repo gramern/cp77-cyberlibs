@@ -235,7 +235,7 @@ end
 
 ---@param text string
 ---@param setting boolean
----@param toggle boolean
+---@param toggle boolean?
 function ImGuiExt.Checkbox(text, setting, toggle)
     ImGui.PushStyleColor(ImGuiCol.Text, activeTheme.textAlt[1], activeTheme.textAlt[2], activeTheme.textAlt[3], activeTheme.textAlt[4])
     setting, toggle = ImGui.Checkbox(text, setting)
@@ -916,23 +916,35 @@ function ImGuiExt.TagBar(tagBarLabel, tagBarWidth)
         initializeTagBar(tagBarLabel)
     end
 
-    local itemSpacing = ImGui.GetStyle().ItemSpacing
     local framePadding = ImGui.GetStyle().FramePadding
-    local tagSpacing = (2 * framePadding.x) + itemSpacing.x
+    local itemSpacing = ImGui.GetStyle().ItemSpacing
+    local tags = tagBars[tagBarLabel].tags
+    local tagsCount = #tags
     local tagsWidth = 0
+    local nextTagsWidth = 0
+    local lineBreak = true
 
-    for _, tag in ipairs(tagBars[tagBarLabel].tags) do
-        local tagWidth = ImGui.CalcTextSize(tag.label) + tagSpacing
-        tagsWidth = tagsWidth + tagWidth
+    for i, tag in ipairs(tags) do
+        if not lineBreak then
+            ImGui.SameLine()
+        else
+            tagsWidth = 0
+        end
 
         if ImGui.SmallButton(tag.label) then
             onTagClick(tag)
         end
 
-        if tagsWidth <= tagBarWidth - tagWidth then
-            ImGui.SameLine()
+        tagsWidth = tagsWidth + ImGui.GetItemRectSize() + itemSpacing.x
+
+        if i == tagsCount then break end
+
+        nextTagsWidth = tagsWidth + ImGui.CalcTextSize(tags[i + 1].label) + (2 * framePadding.x) + itemSpacing.x
+
+        if nextTagsWidth <= tagBarWidth then
+            lineBreak = false
         else
-            tagsWidth = 0
+            lineBreak = true
         end
     end
 end
