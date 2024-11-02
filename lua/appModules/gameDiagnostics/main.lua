@@ -204,7 +204,8 @@ local function scanRed4extMods()
     end
 
     local taggedModules = app.getTaggedModules()
-    local taggedModulesSet = {}
+    local red4extModulesSet = {}
+    mods.other = {}
 
     for _, module in ipairs(taggedModules) do
         for _, tag in ipairs(module.tags) do
@@ -213,11 +214,17 @@ local function scanRed4extMods()
                 module.version = Cyberlibs.GetVersion(module.normalizedPath)
 
                 if string.sub(dirName, 1, 3) == string.lower(string.sub(module.fileName, 1, 3)) then
-                    taggedModulesSet[dirName] = module
+                    red4extModulesSet[dirName] = module
                 else
-                    taggedModulesSet[module.normalizedPath] = module
+                    red4extModulesSet[module.normalizedPath] = module
                 end
 
+                break
+            elseif tag == "unknown" then
+                module.version = Cyberlibs.GetVersion(module.normalizedPath)
+
+                table.insert(mods.other, module)
+                
                 break
             end
         end
@@ -229,16 +236,16 @@ local function scanRed4extMods()
     for _, item in ipairs(red4extDir) do
         local normalizedName = string.lower(item.name)
 
-        if item.type == "dir" and taggedModulesSet[normalizedName] then
-            local kbName = getModsResourceName(taggedModulesSet[normalizedName].normalizedPath)
+        if item.type == "dir" and red4extModulesSet[normalizedName] then
+            local kbName = getModsResourceName(red4extModulesSet[normalizedName].normalizedPath)
 
             if kbName then
-                taggedModulesSet[normalizedName].kbName = kbName
+                red4extModulesSet[normalizedName].kbName = kbName
             end
 
-            table.insert(mods.red4ext.enabled, taggedModulesSet[normalizedName])
+            table.insert(mods.red4ext.enabled, red4extModulesSet[normalizedName])
 
-            taggedModulesSet[normalizedName] = nil
+            red4extModulesSet[normalizedName] = nil
         end
     end
 
@@ -248,12 +255,12 @@ local function scanRed4extMods()
         if item.type == "dir" then
             item.normalizedPath = red4extPath .. "/".. normalizedName
 
-            for k, module in pairs(taggedModulesSet) do
+            for k, module in pairs(red4extModulesSet) do
 
                 if string.find(k, item.normalizedPath) then
                     table.insert(mods.red4ext.enabled, module)
 
-                    taggedModulesSet[k] = nil
+                    red4extModulesSet[k] = nil
 
                     break
                 end
@@ -655,6 +662,26 @@ local function getModsReport()
     end
 
     text = text .. "\n" .. style.formatFooter(tweaksAmount)
+    text = text ..  "\n\n\n" .. style.formatHeader("Other loaded")
+
+    local otherAmount = 0
+
+    table.sort(mods.other, function(a, b)
+        return string.lower(a.filePath) < string.lower(b.filePath)
+    end)
+
+    for _, mod in ipairs(mods.other) do
+        mod.version = ensureIsVersion(mod.filePath, mod.version)
+
+        text = text .. "\n" .. style.formatEntry(mod.filePath ..
+                                                    utils.setStringCursor(mod.filePath, 108, " ") ..
+                                                    "Version: " ..
+                                                    mod.version)
+
+        otherAmount = otherAmount + 1
+    end
+
+    text = text .. "\n" .. style.formatFooter(otherAmount)
 
     text = text .. "\n\nEnd of Report."
 

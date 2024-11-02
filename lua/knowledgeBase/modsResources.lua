@@ -10,6 +10,7 @@ local function intializeTable()
         ["Cyber Engine Tweaks"] = "bin/x64/plugins/cyber_engine_tweaks.asi",
         ["Codeware"] = "red4ext/plugins/Codeware/Codeware.dll",
         ["Cyberlibs"] = "red4ext/plugins/Cyberlibs/Cyberlibs.dll",
+        ["Deceptious Quest Core"] = "archive/pc/mod/zDeceptiousQuestCore.archive",
         ["Input Loader"] = "red4ext/plugins/input_loader/input_loader.dll",
         ["Mod Settings"] = "red4ext/plugins/mod_settings/mod_settings.dll",
         ["Native Settings UI"] = "bin/x64/plugins/cyber_engine_tweaks/mods/nativeSettings/init.lua",
@@ -25,7 +26,7 @@ local function intializeTable()
         ["TweakXL"] = "red4ext/plugins/TweakXL/TweakXL.dll",
         ["RED4ext Loader"] = "bin/x64/winmm.dll",
         ["Ultimate ASI Loader"] = "bin/x64/version.dll",
-        ["Virtual Atalier"] = "archive/pc/mod/VirtualAtelier.archive",
+        ["Virtual Atelier"] = "archive/pc/mod/VirtualAtelier.archive",
         ["Virtual Car Dealer"] = "archive/pc/mod/VirtualCarDealer.archive"
     }
 end
