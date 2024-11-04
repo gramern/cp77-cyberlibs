@@ -23,7 +23,7 @@ public:
     static bool IsDirectory(const Red::CString& relativePath);
     static Red::DynArray<GameDiagnosticsPathEntry> ListDirectory(const Red::CString& relativePath);
     static Red::CString ReadTextFile(const Red::CString& relativeFilePath);
-    static bool VerifyPaths(const Red::CString& relativeFilePath);
+    static bool VerifyPaths(const Red::CString& relativePathsFilePath);
     static bool WriteToOutput(const Red::CString& relativeFilePath, const Red::CString& content,
                             Red::Optional<bool> append);
 

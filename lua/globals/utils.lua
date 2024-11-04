@@ -214,6 +214,26 @@ function utils.normalizePath(path, removeDriveLetter)
     return path
 end
 
+---@param paths string
+---@return table
+function utils.parsePaths(paths)
+    local result = {}
+
+    for path in paths:gmatch("[^;]+") do
+        path = path:match("^%s*(.-)%s*$")
+
+        if path ~= "" then
+            path = path:gsub("\\\\", "/")
+            path = path:gsub("\\", "/")
+            path = path:gsub("/$", "")
+
+            table.insert(result, path)
+        end
+    end
+
+    return result
+end
+
 ---@param fullPath string
 ---@param prefixPath string
 ---@return string

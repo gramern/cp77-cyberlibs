@@ -25,7 +25,7 @@ public native class GameDiagnostics extends IScriptable {
   public static native func GetTimeDateStamp(relativeFilePath: String, opt pathFriendly: Bool) -> String;
   public static native func IsFile(relativeFilePath: String) -> Bool;
   public static native func IsDirectory(relativePath: String) -> Bool;
-  public static native func VerifyPaths(relativeFilePath: String) -> Bool;
+  public static native func VerifyPaths(relativePathsFilePath: String) -> Bool;
   public static native func WriteToOutput(relativeFilePath: String, content: String, opt append: Bool) -> Bool;
 }
 

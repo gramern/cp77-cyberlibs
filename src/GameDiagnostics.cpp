@@ -249,7 +249,7 @@ Red::CString CyberlibsCore::GameDiagnostics::ReadTextFile(const Red::CString& re
     }
 }
 
-bool CyberlibsCore::GameDiagnostics::VerifyPaths(const Red::CString& relativeFilePath)
+bool CyberlibsCore::GameDiagnostics::VerifyPaths(const Red::CString& relativePathsFilePath)
 {
     try
     {
@@ -259,7 +259,7 @@ bool CyberlibsCore::GameDiagnostics::VerifyPaths(const Red::CString& relativeFil
             return false;
         }
 
-        std::string normalizedInputPath = relativeFilePath.c_str();
+        std::string normalizedInputPath = relativePathsFilePath.c_str();
         std::replace(normalizedInputPath.begin(), normalizedInputPath.end(), '\\', '/');
         std::filesystem::path inputPath = std::filesystem::path(gamePath.c_str()) / normalizedInputPath;
         inputPath = inputPath.lexically_normal();
@@ -271,7 +271,7 @@ bool CyberlibsCore::GameDiagnostics::VerifyPaths(const Red::CString& relativeFil
 
         auto extension = inputPath.extension().string();
         std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
-        if (extension != ".libs")
+        if (extension != ".paths")
         {
             return false;
         }

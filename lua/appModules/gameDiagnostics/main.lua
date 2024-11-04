@@ -652,7 +652,7 @@ end
 
 local function initalizeGetPathsSettings()
     output.paths = {
-        asLibs = false,
+        asPaths = false,
         includeLogs = false,
         current = "",
         requested = ""
@@ -690,9 +690,6 @@ local function mapDirectory(relativePath, includeLogs)
     end
 
     local result = {}
-
-
-    local ignored
 
     for _, item in ipairs(items) do
         if not isIgnoredFile(item.name, includeLogs) then
@@ -741,8 +738,60 @@ local function getPaths(dirMap, currentPath, result)
     end
 end
 
-local function isModPath(path)
-    path = utils.removePrefixPath(path, GameDiagnostics.GetGamePath())
+local function generatePaths(path, includeLogs)
+    local gamePath = GameDiagnostics.GetGamePath()
+    path = utils.removePrefixPath(path, gamePath)
+    local result = getPaths(mapDirectory(path, includeLogs))
+
+    local pathsString = ""
+
+    for _, line in ipairs(result) do
+        pathsString = pathsString .. line .. "\n"
+    end
+
+    return pathsString
+end
+
+local function drawInvalidLocationInfo(invalidLocations)
+    local screenWidth, screenHeight = GetDisplayResolution()
+    local itemSpacing = ImGui.GetStyle().ItemSpacing
+
+    ImGui.SetNextWindowPos(screenWidth / 2 - 160, screenHeight / 2 - 120)
+    ImGui.SetNextWindowSize(480, 0)
+
+    if ImGui.Begin("Invalid Path", ImGuiWindowFlags.AlwaysAutoResize + ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.None) then
+        ImGui.Spacing()
+        ImGui.Spacing()
+        ImGui.Indent(itemSpacing.x)
+        ImGuiExt.TextAlt("The requested path(s): ")
+
+        for _, location in ipairs(invalidLocations) do
+            ImGuiExt.TextAlt(location, true)
+        end
+        
+        ImGuiExt.TextAlt("aren't valid relative paths to locations within the game's main directory.", true)
+        ImGui.Indent(- itemSpacing.x)
+        ImGui.Spacing()
+
+        local button_width = 120
+        local contentRegionAvailX = ImGui.GetContentRegionAvail()
+
+        ImGuiExt.AlignNextItemToCenter(button_width, contentRegionAvailX)
+
+        if ImGui.Button("Ok", button_width, 0) then
+            output.paths.invalidLocations = nil
+            output.paths.isInvalidLocationsPopup = false
+        end
+
+        ImGui.Spacing()
+        ImGui.Spacing()
+    end
+
+    ImGui.End()
+end
+
+local function isModLocation(locationPath)
+    locationPath = utils.removePrefixPath(locationPath, GameDiagnostics.GetGamePath())
 
     local modDirectoriesPaths = {
         "archive/pc/mod",
@@ -753,7 +802,7 @@ local function isModPath(path)
     }
 
     for _, dirPath in ipairs(modDirectoriesPaths) do
-        if string.find(path, dirPath) then
+        if string.find(locationPath, dirPath) then
             return true
         end
     end
@@ -761,51 +810,107 @@ local function isModPath(path)
     return false
 end
 
-local function generatePaths(path, includeLogs)
-    ImGuiExt.SetNotification(0, "Generating Paths...")
+local function drawGetPathsConfirmation(nonStandardLocations)
+    local screenWidth, screenHeight = GetDisplayResolution()
+    local itemSpacing = ImGui.GetStyle().ItemSpacing
 
-    local gamePath = GameDiagnostics.GetGamePath()
-    path = utils.removePrefixPath(path, gamePath)
-    local result = getPaths(mapDirectory(path, includeLogs))
+    ImGui.SetNextWindowPos(screenWidth / 2 - 160, screenHeight / 2 - 120)
+    ImGui.SetNextWindowSize(480, 0)
 
-    if not result then
-        ImGuiExt.SetStatusBar(("Enter a valid relative path for a folder within the game's main directory."))
+    if ImGui.Begin("Confirm Path", ImGuiWindowFlags.AlwaysAutoResize + ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.None) then
+        ImGui.Spacing()
+        ImGui.Spacing()
+        ImGui.Indent(itemSpacing.x)
+        ImGuiExt.TextAlt("The requested path(s): ")
+
+        for _, location in ipairs(nonStandardLocations) do
+            ImGuiExt.TextAlt(location, true)
+        end
+
+        ImGuiExt.TextAlt("is/are not standard mod's path. Are you sure?")
+        ImGui.Indent(- itemSpacing.x)
+        ImGui.Spacing()
+
+        local button_width = 120
+        local contentRegionAvailX = ImGui.GetContentRegionAvail()
+
+        ImGuiExt.AlignNextItemToCenter((button_width * 2) + itemSpacing.x, contentRegionAvailX)
+
+        if ImGui.Button("No", button_width, 0) then
+            output.paths.nonStandardLocations = nil
+            output.paths.isConfirmationPopup = false
+        end
+
+        ImGui.SameLine()
+
+        if ImGui.Button("Yes", button_width, 0) then
+            output.paths.nonStandardLocations = nil
+            output.paths.isConfirmationPopup = false
+        end
+
+        ImGui.Spacing()
+        ImGui.Spacing()
     end
 
-    local text = ""
-
-    for _, line in ipairs(result) do
-        text = text .. line .. "\n"
-    end
-
-    if path ~= "" then
-        path = string.gsub(utils.getPathLastComponent(path), "[/\\]+", "")
-    else
-        path = "Cyberpunk 2077"
-    end
-
-    path = path .. "-" .. GameDiagnostics.GetCurrentTimeDate(true)
-    local extension = not output.paths.asLibs and ".txt" or ".libs"
-
-    local filePath = gamePath .. "\\_DIAGNOSTICS\\_PATHS\\" .. path .. extension
-
-    GameDiagnostics.WriteToOutput(filePath, text)
-
-    ImGuiExt.SetNotification(2, "Paths List Ready.")
+    ImGui.End()
 end
 
-local function parsePathInput()
-    output.paths.current = output.paths.requested
+local function parseRequestedPaths()
+    local requestedLocations = utils.parsePaths(output.paths.requested)
 
-    if utils.isValidPath(output.paths.current) and GameDiagnostics.IsDirectory(output.paths.current) then
-        if isModPath(output.paths.current) then
-            generatePaths(output.paths.current, output.paths.includeLogs)
-        else
-            output.paths.isConfirmationPopup = true
+    output.paths.invalidLocations = {}
+
+    for _, location in ipairs(requestedLocations) do
+        if not utils.isValidPath(location) and not GameDiagnostics.IsDirectory(location) then
+            table.insert(output.paths.invalidLocations, location)
         end
-    else
-        ImGuiExt.SetStatusBar("Enter a valid relative path for a folder within the game's main directory.")
     end
+
+    if next(output.paths.invalidLocations) then
+        output.paths.isInvalidLocationsPopup = true
+
+        ImGuiExt.SetStatusBar("Enter a valid relative path for a location within the game's main directory.")
+
+        return
+    end
+
+    output.paths.nonStandardLocations = {}
+
+    for _, location in ipairs(requestedLocations) do
+        if not isModLocation(location) then
+            table.insert(output.paths.nonStandardLocations, location)
+        end
+    end
+
+    if next(output.paths.nonStandardLocations) then
+        output.paths.isConfirmationPopup = true
+
+        return
+    end
+
+    ImGuiExt.SetNotification(0, "Generating Paths...")
+
+    local fileName = ""
+
+    if #requestedLocations == 1 then
+        fileName = string.gsub(utils.getPathLastComponent(requestedLocations[1]), "[/\\]+", "")
+    elseif #requestedLocations == 1 and requestedLocations[1] == "" then
+        fileName = "Cyberpunk-2077"
+    else
+        fileName = "requested"
+    end
+
+    fileName = fileName .. "-" .. GameDiagnostics.GetCurrentTimeDate(true)
+    local extension = not output.paths.asPaths and ".txt" or ".paths"
+    local filePath = GameDiagnostics.GetGamePath() .. "\\_DIAGNOSTICS\\_PATHS\\" .. fileName .. extension
+    local result = ""
+
+    for _, path in ipairs(requestedLocations) do
+        result = result .. "\n" .. generatePaths(path, output.paths.includeLogs)
+    end
+
+    GameDiagnostics.WriteToOutput(filePath, result)
+    ImGuiExt.SetNotification(2, "Paths List Ready.")
 end
 
 local function drawScanModsRequest()
@@ -828,46 +933,6 @@ local function drawScanModsRequest()
     ImGui.Dummy(100, 30 * ImGuiExt.GetResolutionFactor())
 end
 
-local function drawMappingConfirmationWindow()
-    local screenWidth, screenHeight = GetDisplayResolution()
-    local itemSpacing = ImGui.GetStyle().ItemSpacing
-
-    ImGui.SetNextWindowPos(screenWidth / 2 - 160, screenHeight / 2 - 120)
-    ImGui.SetNextWindowSize(480, 0)
-
-    if ImGui.Begin("Confirm Path", ImGuiWindowFlags.AlwaysAutoResize + ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.None) then
-        ImGui.Spacing()
-        ImGui.Spacing()
-        ImGui.Indent(itemSpacing.x)
-        ImGuiExt.TextAlt("The requested path: ")
-        ImGuiExt.TextAlt(output.paths.current, true)
-        ImGuiExt.TextAlt("isn't a standard mod's path. Are you sure?")
-        ImGui.Indent(- itemSpacing.x)
-        ImGui.Spacing()
-
-        local button_width = 120
-        local contentRegionAvailX = ImGui.GetContentRegionAvail()
-
-        ImGuiExt.AlignNextItemToCenter((button_width * 2) + itemSpacing.x, contentRegionAvailX)
-
-        if ImGui.Button("No", button_width, 0) then
-            output.paths.isConfirmationPopup = false
-        end
-
-        ImGui.SameLine()
-
-        if ImGui.Button("Yes", button_width, 0) then
-            output.paths.isConfirmationPopup = false
-
-            generatePaths(output.paths.current, output.paths.includeLogs)
-        end
-
-        ImGui.Spacing()
-        ImGui.Spacing()
-    end
-
-    ImGui.End()
-end
 
 local function draw()
     if not app.isAppModule("gameModules") then
@@ -983,23 +1048,23 @@ local function draw()
     ImGuiExt.TextTitle("Get Paths", 0.9, true)
     ImGui.Spacing()
 
-    if output.paths.asLibs then
+    if output.paths.asPaths then
         ImGui.BeginDisabled()
         output.paths.includeLogs = false
     end
 
     output.paths.includeLogs = ImGuiExt.Checkbox("Include logs", output.paths.includeLogs)
 
-    if output.paths.asLibs then
+    if output.paths.asPaths then
         ImGui.EndDisabled()
     end
 
     if isDev then
-        output.paths.asLibs = ImGuiExt.Checkbox("Save as \".libs\" file", output.paths.asLibs)
+        output.paths.asPaths = ImGuiExt.Checkbox("Save as \".libs\" file", output.paths.asPaths)
     end
 
     ImGui.Text("")
-    ImGuiExt.TextAlt("Relative paths to include:")
+    ImGuiExt.TextAlt("Add relative paths to locations within the game's main directory separated by semicolon (\";\"):", true)
 
     output.paths.requested = ImGui.InputTextMultiline("##FileName", output.paths.requested, 32768, contentRegionAvailX, 4 * ImGui.GetTextLineHeightWithSpacing())
 
@@ -1008,14 +1073,18 @@ local function draw()
     ImGuiExt.AlignNextItemToCenter(getPathsButtonWidth, contentRegionAvailX)
 
     if ImGui.Button("Get Paths", getPathsButtonWidth, 0) then
-        parsePathInput()
+        parseRequestedPaths()
     end
 
     ImGui.Text("")
     ImGui.EndChildFrame()
 
     if output.paths.isConfirmationPopup then
-        drawMappingConfirmationWindow()
+        drawGetPathsConfirmation(output.paths.nonStandardLocations)
+    end
+
+    if output.paths.isInvalidLocationsPopup then
+        drawInvalidLocationInfo(output.paths.invalidLocations)
     end
 end
 
