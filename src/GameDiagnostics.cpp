@@ -53,8 +53,14 @@ Red::CString CyberlibsCore::GameDiagnostics::GetTimeDateStamp(const Red::CString
             return Red::CString("");
         }
 
-        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / relativeFilePath.c_str();
+        std::string normalizedPath = normalizePathString(relativeFilePath);
+        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / normalizedPath;
         fullPath = fullPath.lexically_normal();
+
+        if (!isPathSafe(fullPath))
+        {
+            return Red::CString("");
+        }
 
         WIN32_FILE_ATTRIBUTE_DATA fileInfo;
         if (!GetFileAttributesExW(fullPath.c_str(), GetFileExInfoStandard, &fileInfo))
@@ -64,11 +70,6 @@ Red::CString CyberlibsCore::GameDiagnostics::GetTimeDateStamp(const Red::CString
 
         if ((fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ||
             (fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DEVICE))
-        {
-            return Red::CString("");
-        }
-
-        if (!isPathSafe(fullPath))
         {
             return Red::CString("");
         }
@@ -108,8 +109,11 @@ bool CyberlibsCore::GameDiagnostics::IsFile(const Red::CString& relativeFilePath
             return false;
         }
 
-        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / relativeFilePath.c_str();
-        return std::filesystem::exists(fullPath) && std::filesystem::is_regular_file(fullPath);
+        std::string normalizedPath = normalizePathString(relativeFilePath);
+        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / normalizedPath;
+        fullPath = fullPath.lexically_normal();
+
+        return isPathSafe(fullPath) && std::filesystem::exists(fullPath) && std::filesystem::is_regular_file(fullPath);
     }
     catch (const std::exception&)
     {
@@ -127,9 +131,11 @@ bool CyberlibsCore::GameDiagnostics::IsDirectory(const Red::CString& relativePat
             return false;
         }
 
-        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / relativePath.c_str();
+        std::string normalizedPath = normalizePathString(relativePath);
+        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / normalizedPath;
+        fullPath = fullPath.lexically_normal();
 
-        return std::filesystem::exists(fullPath) && std::filesystem::is_directory(fullPath);
+        return isPathSafe(fullPath) && std::filesystem::exists(fullPath) && std::filesystem::is_directory(fullPath);
     }
     catch (const std::exception&)
     {
@@ -150,8 +156,10 @@ Red::DynArray<CyberlibsCore::GameDiagnosticsPathEntry> CyberlibsCore::GameDiagno
             return result;
         }
 
-        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / relativePath.c_str();
+        std::string normalizedPath = normalizePathString(relativePath);
+        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / normalizedPath;
         fullPath = fullPath.lexically_normal();
+
         if (!isPathSafe(fullPath) || !std::filesystem::exists(fullPath) || !std::filesystem::is_directory(fullPath))
         {
             return result;
@@ -160,7 +168,9 @@ Red::DynArray<CyberlibsCore::GameDiagnosticsPathEntry> CyberlibsCore::GameDiagno
         for (const auto& entry : std::filesystem::directory_iterator(fullPath))
         {
             GameDiagnosticsPathEntry dirEntry;
-            dirEntry.name = Red::CString(entry.path().filename().string().c_str());
+            std::string entryPath = entry.path().filename().string();
+            std::replace(entryPath.begin(), entryPath.end(), '\\', '/');
+            dirEntry.name = Red::CString(entryPath.c_str());
             dirEntry.type = entry.is_directory() ? Red::CString("dir") : Red::CString("file");
             result.PushBack(dirEntry);
         }
@@ -183,10 +193,12 @@ Red::CString CyberlibsCore::GameDiagnostics::ReadTextFile(const Red::CString& re
             return Red::CString("");
         }
 
-        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / relativeFilePath.c_str();
+        std::string normalizedPath = normalizePathString(relativeFilePath);
+        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / normalizedPath;
         fullPath = fullPath.lexically_normal();
 
-        if (!isPathSafe(fullPath) || !std::filesystem::exists(fullPath) || !std::filesystem::is_regular_file(fullPath))
+        if (!isPathSafe(fullPath) || !std::filesystem::exists(fullPath) ||
+            !std::filesystem::is_regular_file(fullPath) || !isTextFile(fullPath))
         {
             return Red::CString("");
         }
@@ -196,15 +208,8 @@ Red::CString CyberlibsCore::GameDiagnostics::ReadTextFile(const Red::CString& re
             return Red::CString("");
         }
 
-        const size_t MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB limit
-
-        HANDLE hFile = CreateFileW(fullPath.c_str(),
-                                   GENERIC_READ,
-                                   FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                   NULL,
-                                   OPEN_EXISTING,
-                                   FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                                   NULL);
+        HANDLE hFile = CreateFileW(fullPath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                   OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
 
         if (hFile == INVALID_HANDLE_VALUE)
         {
@@ -214,7 +219,7 @@ Red::CString CyberlibsCore::GameDiagnostics::ReadTextFile(const Red::CString& re
         std::unique_ptr<void, decltype(&CloseHandle)> fileGuard(hFile, CloseHandle);
 
         LARGE_INTEGER fileSize;
-        if (!GetFileSizeEx(hFile, &fileSize) || fileSize.QuadPart > MAX_FILE_SIZE)
+        if (!GetFileSizeEx(hFile, &fileSize) || fileSize.QuadPart > MAX_OUTPUT_FILE_SIZE)
         {
             return Red::CString("");
         }
@@ -244,21 +249,91 @@ Red::CString CyberlibsCore::GameDiagnostics::ReadTextFile(const Red::CString& re
     }
 }
 
-bool CyberlibsCore::GameDiagnostics::WriteToOutput(const Red::CString& relativeFilePath, const Red::CString& content,
-                                                   Red::Optional<bool> append)
+bool CyberlibsCore::GameDiagnostics::VerifyPaths(const Red::CString& relativeFilePath)
 {
-    constexpr size_t MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit
-
     try
     {
-        const std::string_view path(relativeFilePath.c_str());
-        if (path.find('/') == std::string_view::npos && path.find('\\') == std::string_view::npos)
+        auto gamePath = GetGamePath();
+        if (gamePath.Length() == 0)
         {
             return false;
         }
 
+        std::string normalizedInputPath = relativeFilePath.c_str();
+        std::replace(normalizedInputPath.begin(), normalizedInputPath.end(), '\\', '/');
+        std::filesystem::path inputPath = std::filesystem::path(gamePath.c_str()) / normalizedInputPath;
+        inputPath = inputPath.lexically_normal();
+        if (!isPathSafe(inputPath) || !std::filesystem::exists(inputPath) ||
+            !std::filesystem::is_regular_file(inputPath))
+        {
+            return false;
+        }
 
-        std::filesystem::path fullPath = getOutputPath(relativeFilePath);
+        auto extension = inputPath.extension().string();
+        std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+        if (extension != ".libs")
+        {
+            return false;
+        }
+
+        auto validations = readLines(inputPath);
+        if (validations.empty())
+        {
+            return false;
+        }
+
+        const std::filesystem::path gameRoot = std::filesystem::path(gamePath.c_str()).lexically_normal();
+
+        for (const auto& validation : validations)
+        {
+            std::string cleanPath = validation.path;
+            std::replace(cleanPath.begin(), cleanPath.end(), '\\', '/');
+            if (cleanPath.empty() || cleanPath[0] == '#')
+            {
+                continue;
+            }
+
+            while (!cleanPath.empty() && (cleanPath[0] == '/' || cleanPath[0] == '\\'))
+            {
+                cleanPath = cleanPath.substr(1);
+            }
+
+            std::filesystem::path pathToCheck = gameRoot / cleanPath;
+            pathToCheck = pathToCheck.lexically_normal();
+            if (!isPathSafe(pathToCheck))
+            {
+                return false;
+            }
+
+            bool exists = std::filesystem::exists(pathToCheck);
+
+            if (validation.shouldExist != exists)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+    catch (const std::exception&)
+    {
+        return false;
+    }
+}
+
+bool CyberlibsCore::GameDiagnostics::WriteToOutput(const Red::CString& relativeFilePath, const Red::CString& content,
+                                                   Red::Optional<bool> append)
+{
+    try
+    {
+        std::string normalizedPath = normalizePathString(relativeFilePath);
+
+        if (normalizedPath.find('/') == std::string::npos)
+        {
+            return false;
+        }
+
+        std::filesystem::path fullPath = getOutputPath(Red::CString(normalizedPath.c_str()));
         if (fullPath.empty())
         {
             return false;
@@ -268,7 +343,7 @@ bool CyberlibsCore::GameDiagnostics::WriteToOutput(const Red::CString& relativeF
         {
             std::error_code ec;
             auto fileSize = std::filesystem::file_size(fullPath, ec);
-            if (!ec && fileSize + content.Length() > MAX_FILE_SIZE)
+            if (!ec && fileSize + content.Length() > MAX_INPUT_FILE_SIZE)
             {
                 return false;
             }
@@ -386,7 +461,12 @@ bool CyberlibsCore::GameDiagnostics::isTextFile(const std::filesystem::path& pat
 {
     std::string extension = path.extension().string();
     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
-    return extension == ".txt" || extension == ".log" || extension == ".md";
+
+    return std::any_of(
+        std::begin(VALID_TEXT_EXTENSIONS),
+        std::end(VALID_TEXT_EXTENSIONS),
+        [&extension](const char* valid_ext) { return extension == valid_ext; }
+    );
 }
 
 bool CyberlibsCore::GameDiagnostics::isValidUtf8(const std::string& str)
@@ -443,4 +523,76 @@ bool CyberlibsCore::GameDiagnostics::isValidUtf8(const std::string& str)
     }
 
     return true;
+}
+
+std::string CyberlibsCore::GameDiagnostics::normalizePathString(std::string path)
+{
+    std::replace(path.begin(), path.end(), '\\', '/');
+    while (!path.empty() && (path[0] == '/' || path[0] == '\\'))
+    {
+        path = path.substr(1);
+    }
+
+    return path;
+}
+
+std::vector<CyberlibsCore::GameDiagnostics::PathValidation> CyberlibsCore::GameDiagnostics::readLines(
+    const std::filesystem::path& path)
+{
+    std::vector<PathValidation> lines;
+    std::ifstream file(path, std::ios::in | std::ios::binary);
+    if (!file.is_open())
+    {
+        return lines;
+    }
+
+    std::string line;
+
+    while (std::getline(file, line))
+    {
+        if (!line.empty() && line.back() == '\r')
+        {
+            line.pop_back();
+        }
+
+        if (line.empty() || line[0] == '#')
+        {
+            continue;
+        }
+
+        size_t start = line.find_first_not_of(" \t");
+        if (start == std::string::npos)
+        {
+            continue;
+        }
+
+        size_t end = line.find_last_not_of(" \t");
+        line = line.substr(start, end - start + 1);
+
+        PathValidation validation;
+
+        if (line[0] == '!')
+        {
+            validation.shouldExist = false;
+            validation.path = line.substr(1);
+            start = validation.path.find_first_not_of(" \t");
+            if (start != std::string::npos)
+            {
+                end = validation.path.find_last_not_of(" \t");
+                validation.path = validation.path.substr(start, end - start + 1);
+            }
+        }
+        else
+        {
+            validation.shouldExist = true;
+            validation.path = line;
+        }
+
+        if (!validation.path.empty())
+        {
+            lines.push_back(validation);
+        }
+    }
+
+    return lines;
 }

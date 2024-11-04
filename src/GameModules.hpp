@@ -16,7 +16,7 @@ import libpe;
 
 namespace CyberlibsCore
 {
-class GameModules
+struct GameModules : Red::IScriptable
 {
 public:
     static Red::CString GetCompanyName(const Red::CString& fileNameOrPath);

@@ -107,8 +107,8 @@ local function canBeParsed(fileNameOrPath)
     if fileNameOrPath then
         local normalizedNameOrPath = utils.normalizePath(fileNameOrPath)
 
-        if not GameModules.IsLoaded(normalizedNameOrPath) and not utils.isValidPath(normalizedNameOrPath) then
-            logger.warning("Module not found.")
+        if not GameModules.IsLoaded(normalizedNameOrPath) then
+            logger.debug("Module isn't loaded:", normalizedNameOrPath)
 
             return false
         end
@@ -123,7 +123,7 @@ function publicApi.GetVersion(fileNameOrPath)
     local versions = require("knowledgeBase/versions")
     search.setBrowseInstance('getVersion', versions.getTable())
     local normalizedNameOrPath = utils.normalizePath(fileNameOrPath)
-    local fileName = utils.getFileName(fileNameOrPath)
+    local fileName = utils.getPathLastComponent(fileNameOrPath)
     local isData = search.followBrowseItem('getVersion', fileName)
     local version
 
@@ -174,7 +174,7 @@ function publicApi.PrintAttribute(fileNameOrPath, attribute, dump)
         if not dump then
             logger.custom(false, false, 0, result)
         else
-            local fileName = utils.getFileName(fileNameOrPath)
+            local fileName = utils.getPathLastComponent(fileNameOrPath)
 
             GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-" .. attribute .. ".txt", result)
             logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
@@ -207,7 +207,7 @@ local function parseExport(fileNameOrPath)
         return ""
     end
 
-    local fileName = utils.getFileName(fileNameOrPath)
+    local fileName = utils.getPathLastComponent(fileNameOrPath)
     local result = style.formatHeader(fileName .. "EXPORT")
 
     local forwarder
@@ -234,7 +234,7 @@ function publicApi.PrintExport(fileNameOrPath, dump)
     if not dump then
         logger.custom(false, false, 0, result)
     else
-        local fileName = utils.getFileName(fileNameOrPath)
+        local fileName = utils.getPathLastComponent(fileNameOrPath)
 
         GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-Export.txt", result)
         logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
@@ -253,7 +253,7 @@ local function parseImport(fileNameOrPath)
         return ""
     end
 
-    local fileName = utils.getFileName(fileNameOrPath)
+    local fileName = utils.getPathLastComponent(fileNameOrPath)
     local result = style.formatHeader(fileName .. "IMPORT")
 
     for i, import in ipairs(importArray) do
@@ -274,7 +274,7 @@ function publicApi.PrintImport(fileNameOrPath, dump)
     if not dump then
         logger.custom(false, false, 0, result)
     else
-        local fileName = utils.getFileName(fileNameOrPath)
+        local fileName = utils.getPathLastComponent(fileNameOrPath)
 
         GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-Import.txt", result)
         logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
@@ -297,7 +297,7 @@ function publicApi.PrintIsLoaded(fileNameOrPath, dump)
     if not dump then
         logger.custom(false, false, 0, result)
     else
-        local fileName = utils.getFileName(fileNameOrPath)
+        local fileName = utils.getPathLastComponent(fileNameOrPath)
 
         GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-IsLoaded-" .. GameDiagnostics.GetCurrentTimeDate(true) .. ".txt", result)
         logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
@@ -353,7 +353,7 @@ function publicApi.PrintVersion(fileNameOrPath, dump)
     if not dump then
         logger.custom(false, dump, 0, result)
     else
-        local fileName = utils.getFileName(fileNameOrPath)
+        local fileName = utils.getPathLastComponent(fileNameOrPath)
 
         GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-Version.txt", result)
         logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)
@@ -363,7 +363,7 @@ end
 function publicApi.PrintModuleInfo(fileNameOrPath, dump)
     if not canBeParsed(fileNameOrPath) then return end
 
-    local result = utils.getFileName(fileNameOrPath)
+    local result = utils.getPathLastComponent(fileNameOrPath)
     result = result .. "\n" .. parseAttribute(fileNameOrPath, "FilePath")
     result = result .. "\nVersion: " .. parseVersion(fileNameOrPath)
     result = result .. "\nTimeDateStamp: " .. parseAttribute(fileNameOrPath, "TimeDateStamp")
@@ -387,7 +387,7 @@ function publicApi.PrintModuleInfo(fileNameOrPath, dump)
     if not dump then
         logger.custom(false, dump, 0, result)
     else
-        local fileName = utils.getFileName(fileNameOrPath)
+        local fileName = utils.getPathLastComponent(fileNameOrPath)
 
         GameDiagnostics.WriteToOutput("_PARSED_DATA/" .. fileName .. "/" .. fileName .. "-ModuleInfo.txt", result)
         logger.info("Requested data dumped to ..\\_DIAGNOSTICS\\_PARSED_DATA\\" .. fileName)

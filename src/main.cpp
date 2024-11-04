@@ -28,7 +28,7 @@ RED4EXT_C_EXPORT void RED4EXT_CALL Query(RED4ext::PluginInfo* aInfo)
 {
     aInfo->name = L"Cyberlibs";
     aInfo->author = L"gramern";
-    aInfo->version = RED4EXT_SEMVER(0, 2, 0);
+    aInfo->version = RED4EXT_SEMVER(0, 2, 1);
     aInfo->runtime = RED4EXT_RUNTIME_LATEST;
     aInfo->sdk = RED4EXT_SDK_LATEST;
 }

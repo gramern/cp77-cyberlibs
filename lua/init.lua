@@ -1,9 +1,9 @@
 Cyberlibs = {
     __NAME = "Cyberlibs",
     __EDITION = nil,
-    __VERSION = { 0, 2, 0 },
+    __VERSION = { 0, 2, 1 },
     __VERSION_SUFFIX = nil,
-    __VERSION_STATUS = "beta3",
+    __VERSION_STATUS = "beta1",
     __DESCRIPTION = "A mods resource and on-runtime diagnostics tool for Cyberpunk 2077.",
     __LICENSE =
         [[
@@ -242,7 +242,7 @@ local function openDefaultTabs()
 end
 
 local function drawAboutTab()
-    local itemWidth = ImGui.GetWindowWidth() - 2 * ImGui.GetStyle().WindowPadding.x
+    local contentRegionAvailX = ImGui.GetContentRegionAvail()
     local framePaddingX = ImGui.GetStyle().FramePadding.x
 
     search.updateFilterInstance("RootWindow.AboutTab")
@@ -258,7 +258,7 @@ local function drawAboutTab()
     ImGui.Indent(- framePaddingX)
 
     ImGui.BeginChildFrame(ImGui.GetID("RootWindow.About.LicenseThirdParty"),
-                            itemWidth,
+                            contentRegionAvailX,
                             400 * ImGuiExt.GetScaleFactor(),
                             ImGuiWindowFlags.AlwaysHorizontalScrollbar)
     ImGui.Text(tabAbout.licenses)
@@ -266,7 +266,7 @@ local function drawAboutTab()
 
     if tabAbout.pluginVersion ~= "" then return end
 
-    if not appApi.isCyberlibsDLL() then
+    if not isDLL then
         tabAbout.pluginVersion = "Install Cyberlibs RED4ext Plugin."
         tabAbout.luaGuiVersion = "Install Cyberlibs RED4ext Plugin."
         tabAbout.licenses = utils.indentString(Cyberlibs.__LICENSE, -20, true)
@@ -275,7 +275,7 @@ local function drawAboutTab()
     end
 
     tabAbout.pluginVersion = Cyberlibs.Version()
-    tabAbout.luaGuiVersion = Cyberlibs.Version()
+    tabAbout.luaGuiVersion = GameModules.GetVersion("Cyberlibs.dll")
     local thirdparty = GameDiagnostics.ReadTextFile("red4ext/plugins/Cyberlibs/THIRD_PARTY_LICENSES.md")
     local kudos = GameDiagnostics.ReadTextFile("bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs/kudos.md")
 
@@ -372,7 +372,7 @@ local function drawHelpTreeNode(node, name, depth, nodePath)
 end
 
 local function drawHelpTab()
-    local itemWidth = ImGui.GetWindowWidth() - 2 * ImGui.GetStyle().WindowPadding.x
+    local contentRegionAvailX = ImGui.GetContentRegionAvail()
 
     search.updateFilterInstance("RootWindow.HelpTab")
 
@@ -390,7 +390,7 @@ local function drawHelpTab()
     local sortedKeys = tables.assignKeysOrder(tabHelp.topicsPool)
 
     ImGui.BeginChildFrame(ImGui.GetID("RootWindow.Help.TopicsTree"),
-                            itemWidth,
+                            contentRegionAvailX,
                             200 * ImGuiExt.GetScaleFactor(),
                             ImGuiWindowFlags.HorizontalScrollbar +
                             ImGuiWindowFlags.NoBackground)
@@ -438,7 +438,7 @@ local function drawHelpTab()
     ImGui.InputTextMultiline("##RootWindow.Help.Viewer",
                                 tabHelp.selectedTopicContent,
                                 32768,
-                                itemWidth,
+                                contentRegionAvailX,
                                 300 * ImGuiExt.GetScaleFactor(),
                                 ImGuiInputTextFlags.ReadOnly)
     
@@ -449,7 +449,8 @@ local function drawHelpTab()
 end
 
 local function drawSettingsTab()
-    local itemWidth = ImGui.GetWindowWidth() - 2 * ImGui.GetStyle().WindowPadding.x
+    local contentRegionAvailX = ImGui.GetContentRegionAvail()
+    local itemSpacing = ImGui.GetStyle().ItemSpacing
     local debugBool, debugToggle
     local tabBarDropdownBool, tabBarDropdownToggle
     local tabOnMiddleClickBool, tabOnMiddleClickToggle
@@ -458,7 +459,7 @@ local function drawSettingsTab()
 
     search.updateFilterInstance("RootWindow.SettingsTab")
     ImGui.BeginChildFrame(ImGui.GetID("RootWindow.Settings"),
-                            itemWidth,
+                            contentRegionAvailX,
                             656 * ImGuiExt.GetScaleFactor(),
                             ImGuiWindowFlags.NoBackground)
 
@@ -506,11 +507,13 @@ local function drawSettingsTab()
 
     ImGui.Text("")
     ImGuiExt.TextAlt("Window Theme:")
-    ImGuiExt.DrawWithItemWidth(300 * ImGuiExt.GetScaleFactor(), true, "ThemesCombo")
+    ImGuiExt.DrawWithItemWidth(0.4 * contentRegionAvailX, true, "ThemesCombo")
     ImGuiExt.SetTooltip("Select mod's window theme.")
     ImGui.SameLine()
 
-    if ImGui.Button("Save", 100 * ImGuiExt.GetScaleFactor(), 0) then
+    local saveTexWidth = ImGui.CalcTextSize("Save") + 2 * itemSpacing.x
+
+    if ImGui.Button("Save", saveTexWidth, 0) then
         settings.setModSetting("windowTheme", ImGuiExt.GetActiveThemeName())
 
         ImGuiExt.SetStatusBar("Settings saved.")
@@ -535,12 +538,13 @@ local function drawSettingsTab()
     ImGuiExt.TextTitle("Debug", 0.9, true)
     ImGui.Spacing()
 
-    debugBool, debugToggle = ImGuiExt.Checkbox("Enable debug mode", settings.getModSetting("debugMode") or false, debugToggle)
+    debugBool, debugToggle = ImGuiExt.Checkbox("Enable dev mode", settings.getModSetting("debugMode") or false, debugToggle)
     if debugToggle then
         settings.setModSetting("debugMode", debugBool)
         logger.setDebug(settings.getModSetting("debugMode"))
     end
 
+    ImGuiExt.SetTooltip("Enable dev mode. Some options may require reopening the overlay to work.")
     ImGui.Text("")
 
     if debugBool then

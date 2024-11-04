@@ -4,6 +4,7 @@ local ImGuiExt = require("globals/ImGuiExt")
 local logger = require("globals/logger")
 local search = require("globals/search")
 local style = require("globals/custom/style")
+local settings = require("globals/settings")
 local tables = require("globals/tables")
 local utils = require("globals/utils")
 
@@ -14,64 +15,9 @@ local sortedModsResources  = {
 
 local mods = {}
 
-local reports = {}
+local output = {}
 
--- local function mapDirectory(relativePath)
---     relativePath = utils.normalizePath(relativePath)
---     local items = GameDiagnostics.ListDirectory(relativePath)
-
---     if not items then
---         return nil
---     end
-
---     local result = {}
-
---     for _, item in ipairs(items) do
---         if item.name ~= "__folder_managed_by_vortex" and item.name ~= ".stub" then
---             if item.type == "file" then
---                 result[item.name] = {
---                     type = "file"
---                 }
---             elseif item.type == "dir" then
---                 local subPath
-
---                 if relativePath == "" then
---                     subPath = item.name
---                 else
---                     subPath = relativePath .. "/" .. item.name
---                 end
-
---                 result[item.name] = {
---                     type = "dir",
---                     contents = mapDirectory(subPath)
---                 }
---             end
---         end
---     end
-
---     return result
--- end
-
--- local function getPaths(dirMap, currentPath, result)
---     result = result or {}
---     currentPath = currentPath or ""
-
---     for name, item in pairs(dirMap) do
---         local path = currentPath == "" and name or currentPath .. "/" .. name
-
---         if item.type == "file" then
---             table.insert(result, path)
---         elseif item.type == "dir" and item.contents then
---             getPaths(item.contents, path, result)
---         end
---     end
-
---     if currentPath == "" then
---         table.sort(result)
-
---         return result
---     end
--- end
+local isDev = false
 
 local function getModsResourceName(filePath)
     local modsResources = require("knowledgeBase/modsResources")
@@ -210,7 +156,7 @@ local function scanRed4extMods()
     for _, module in ipairs(taggedModules) do
         for _, tag in ipairs(module.tags) do
             if tag == "red4ext" then
-                local dirName =  utils.getLastDirectoryName(module.normalizedPath)
+                local dirName =  utils.getPathSecondLastComponent(module.normalizedPath)
                 module.version = Cyberlibs.GetVersion(module.normalizedPath)
 
                 if string.sub(dirName, 1, 3) == string.lower(string.sub(module.fileName, 1, 3)) then
@@ -420,9 +366,10 @@ local function getModsResourcesStatus()
         result[name] = "NOT INSTALLED"
 
         for _, framework in ipairs (coreFrameworks) do
-            if framework == name then
-                local isLoaded = GameModules.IsLoaded(utils.getFileName(relativePath))
-                local version = Cyberlibs.GetVersion(utils.getFileName(relativePath))
+            if framework == name 
+            then
+                local isLoaded = GameModules.IsLoaded(utils.getPathLastComponent(relativePath))
+                local version = Cyberlibs.GetVersion(utils.getPathLastComponent(relativePath))
 
                 if isLoaded and version == "Unknown" then
                     result[name] = "Installed, version unknown"
@@ -475,8 +422,8 @@ local function scanMods()
 end
 
 local function initalizeModsReportSettings()
-    reports.mods = {
-        inculdeCurrentLogs = true
+    output.mods = {
+        inculdeCurrentLogs = true,
     }
 end
 
@@ -484,14 +431,14 @@ local function isModsReport(fileName)
     if not fileName then return end
 
     if GameDiagnostics.IsFile("_DIAGNOSTICS/_REPORTS/" .. fileName) then
-        reports.mods.isReport = true
-        reports.mods.reportName = fileName
-        reports.mods.path = GameDiagnostics.GetGamePath() .. "\\_DIAGNOSTICS\\_REPORTS"
+        output.mods.isReport = true
+        output.mods.reportName = fileName
+        output.mods.current = GameDiagnostics.GetGamePath() .. "\\_DIAGNOSTICS\\_REPORTS"
 
         return true
     else
-        reports.mods.isReport = false
-        reports.mods.reportName = nil
+        output.mods.isReport = false
+        output.mods.reportName = nil
     end
 end
 
@@ -548,7 +495,7 @@ local function getModsReport()
 
     text = text .. "\n" .. style.formatFooter(red4extAmount)
 
-    if reports.mods.inculdeCurrentLogs then
+    if output.mods.inculdeCurrentLogs then
         text = text ..  "\n\n\n" .. style.formatHeader("RED4ext Current Log")
 
         local red4extLogsPath = "red4ext/logs"
@@ -601,7 +548,7 @@ local function getModsReport()
 
     text = text .. "\n" .. style.formatFooter(redscriptAmount)
 
-    if reports.mods.inculdeCurrentLogs then
+    if output.mods.inculdeCurrentLogs then
         text = text ..  "\n\n\n" .. style.formatHeader("RedScript Current Log")
 
         local redscriptLog = GameDiagnostics.ReadTextFile("r6/logs/redscript_rCURRENT.log")
@@ -703,25 +650,230 @@ local function generateModsReport()
     end
 end
 
+local function initalizeGetPathsSettings()
+    output.paths = {
+        asLibs = false,
+        includeLogs = false,
+        current = "",
+        requested = ""
+    }
+end
+
+local function isIgnoredFile(fileName, includeLogs)
+    fileName = string.lower(fileName)
+
+    local ignoredFiles = {
+        [".stub"] = true,
+        ["__folder_managed_by_vortex"] = true,
+        ["db.sqlite3"] = true,
+        ["vortex_placeholder.txt"] = true,
+        ["vortexdeployment.json"] = true,
+    }
+
+    if ignoredFiles[fileName] or string.find(fileName, "%.vortex_backup$") then
+        return true
+    end
+
+    if not includeLogs and string.find(fileName, "%.log$") then
+        return true
+    end
+
+    return false
+end
+
+local function mapDirectory(relativePath, includeLogs)
+    relativePath = utils.normalizePath(relativePath)
+    local items = GameDiagnostics.ListDirectory(relativePath)
+
+    if not items then
+        return nil
+    end
+
+    local result = {}
+
+
+    local ignored
+
+    for _, item in ipairs(items) do
+        if not isIgnoredFile(item.name, includeLogs) then
+            if item.type == "file" then
+                result[item.name] = {
+                    type = "file"
+                }
+            elseif item.type == "dir" then
+                local subPath
+
+                if relativePath == "" then
+                    subPath = item.name
+                else
+                    subPath = relativePath .. "/" .. item.name
+                end
+
+                result[item.name] = {
+                    type = "dir",
+                    contents = mapDirectory(subPath, includeLogs)
+                }
+            end
+        end
+    end
+
+    return result
+end
+
+local function getPaths(dirMap, currentPath, result)
+    result = result or {}
+    currentPath = currentPath or ""
+
+    for name, item in pairs(dirMap) do
+        local path = currentPath == "" and name or currentPath .. "/" .. name
+
+        if item.type == "file" then
+            table.insert(result, path)
+        elseif item.type == "dir" and item.contents then
+            getPaths(item.contents, path, result)
+        end
+    end
+
+    if currentPath == "" then
+        table.sort(result)
+
+        return result
+    end
+end
+
+local function isModPath(path)
+    path = utils.removePrefixPath(path, GameDiagnostics.GetGamePath())
+
+    local modDirectoriesPaths = {
+        "archive/pc/mod",
+        "bin/x64/plugins/cyber_engine_tweaks/mods",
+        "red4ext/plugins",
+        "r6/scripts",
+        "r6/tweaks"
+    }
+
+    for _, dirPath in ipairs(modDirectoriesPaths) do
+        if string.find(path, dirPath) then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function generatePaths(path, includeLogs)
+    ImGuiExt.SetNotification(0, "Generating Paths...")
+
+    local gamePath = GameDiagnostics.GetGamePath()
+    path = utils.removePrefixPath(path, gamePath)
+    local result = getPaths(mapDirectory(path, includeLogs))
+
+    if not result then
+        ImGuiExt.SetStatusBar(("Enter a valid relative path for a folder within the game's main directory."))
+    end
+
+    local text = ""
+
+    for _, line in ipairs(result) do
+        text = text .. line .. "\n"
+    end
+
+    if path ~= "" then
+        path = string.gsub(utils.getPathLastComponent(path), "[/\\]+", "")
+    else
+        path = "Cyberpunk 2077"
+    end
+
+    path = path .. "-" .. GameDiagnostics.GetCurrentTimeDate(true)
+    local extension = not output.paths.asLibs and ".txt" or ".libs"
+
+    local filePath = gamePath .. "\\_DIAGNOSTICS\\_PATHS\\" .. path .. extension
+
+    GameDiagnostics.WriteToOutput(filePath, text)
+
+    ImGuiExt.SetNotification(2, "Paths List Ready.")
+end
+
+local function parsePathInput()
+    output.paths.current = output.paths.requested
+
+    if utils.isValidPath(output.paths.current) and GameDiagnostics.IsDirectory(output.paths.current) then
+        if isModPath(output.paths.current) then
+            generatePaths(output.paths.current, output.paths.includeLogs)
+        else
+            output.paths.isConfirmationPopup = true
+        end
+    else
+        ImGuiExt.SetStatusBar("Enter a valid relative path for a folder within the game's main directory.")
+    end
+end
+
 local function drawScanModsRequest()
     local contentRegionAvailX = ImGui.GetContentRegionAvail()
+    local itemSpacing = ImGui.GetStyle().ItemSpacing
     local infoText = "To start, please press the button below."
     local infoTextWidth = ImGui.CalcTextSize(infoText)
+    local scanModsButtonWidth = ImGui.CalcTextSize("Scan Mods") + 8 * itemSpacing.x
 
     ImGui.Dummy(100, 30 * ImGuiExt.GetResolutionFactor())
     ImGuiExt.AlignNextItemToCenter(infoTextWidth, contentRegionAvailX)
     ImGuiExt.TextAlt(infoText, true)
     ImGui.Text("")
-    ImGuiExt.AlignNextItemToCenter(300, contentRegionAvailX)
+    ImGuiExt.AlignNextItemToCenter(scanModsButtonWidth, contentRegionAvailX)
 
-    if ImGui.Button("Scan Mods", 300, 0) then
+    if ImGui.Button("Scan Mods", scanModsButtonWidth, 0) then
        scanMods()
     end
 
     ImGui.Dummy(100, 30 * ImGuiExt.GetResolutionFactor())
 end
 
+local function drawMappingConfirmationWindow()
+    local screenWidth, screenHeight = GetDisplayResolution()
+    local itemSpacing = ImGui.GetStyle().ItemSpacing
+
+    ImGui.SetNextWindowPos(screenWidth / 2 - 160, screenHeight / 2 - 120)
+    ImGui.SetNextWindowSize(480, 0)
+
+    if ImGui.Begin("Confirm Path", ImGuiWindowFlags.AlwaysAutoResize + ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.None) then
+        ImGui.Spacing()
+        ImGui.Spacing()
+        ImGui.Indent(itemSpacing.x)
+        ImGuiExt.TextAlt("The requested path: ")
+        ImGuiExt.TextAlt(output.paths.current, true)
+        ImGuiExt.TextAlt("isn't a standard mod's path. Are you sure?")
+        ImGui.Indent(- itemSpacing.x)
+        ImGui.Spacing()
+
+        local button_width = 120
+        local contentRegionAvailX = ImGui.GetContentRegionAvail()
+
+        ImGuiExt.AlignNextItemToCenter((button_width * 2) + itemSpacing.x, contentRegionAvailX)
+
+        if ImGui.Button("No", button_width, 0) then
+            output.paths.isConfirmationPopup = false
+        end
+
+        ImGui.SameLine()
+
+        if ImGui.Button("Yes", button_width, 0) then
+            output.paths.isConfirmationPopup = false
+
+            generatePaths(output.paths.current, output.paths.includeLogs)
+        end
+
+        ImGui.Spacing()
+        ImGui.Spacing()
+    end
+
+    ImGui.End()
+end
+
 local function draw()
+    if not app.isAppModule("gameModules") then
+        ImGuiExt.SetStatusBar("Missing \"Game Modules\" AppModule. Presented data will be inaccurate.")
+    end
+
     if not next(mods) then
         drawScanModsRequest()
 
@@ -732,6 +884,7 @@ local function draw()
     local contentRegionAvailX = ImGui.GetContentRegionAvail()
     local windowPaddingX = ImGui.GetStyle().WindowPadding.x
     local itemWidth = windowWidth - 2 * windowPaddingX
+    local itemSpacing = ImGui.GetStyle().ItemSpacing
     local scrollbarSize = ImGui.GetStyle().ScrollbarSize
     local textRed, textGreen, textBlue, textAlpha
 
@@ -791,45 +944,98 @@ local function draw()
     ImGui.Separator()
     ImGui.Spacing()
 
-    reports.mods.inculdeCurrentLogs = ImGuiExt.Checkbox("Include current RED4ext and Redscript logs", reports.mods.inculdeCurrentLogs)
+    ImGui.BeginChildFrame(ImGui.GetID("GameDiagnostics.Features"),
+                            itemWidth,
+                            360 * ImGuiExt.GetScaleFactor(),
+                            ImGuiWindowFlags.NoBackground)
+
+    ImGui.Separator()
+    ImGuiExt.TextTitle("Mods Report", 0.9, true)
+    ImGui.Spacing()
+
+    output.mods.inculdeCurrentLogs = ImGuiExt.Checkbox("Include current RED4ext and Redscript logs", output.mods.inculdeCurrentLogs)
 
     ImGui.Text("")
 
-    ImGuiExt.AlignNextItemToCenter(300, contentRegionAvailX)
+    local generateReportButtonWidth = ImGui.CalcTextSize("Generate Mods Report") + 8 * itemSpacing.x
 
-    if ImGui.Button("Generate Mods Report", 300, 0) then
+    ImGuiExt.AlignNextItemToCenter(generateReportButtonWidth, contentRegionAvailX)
+
+    if ImGui.Button("Generate Mods Report", generateReportButtonWidth, 0) then
         generateModsReport()
     end
 
-    if reports.mods.isReport then
-        local reportInfo = "Report \"" .. reports.mods.reportName .. "\" is available in\n"
+    if output.mods.isReport then
+        local reportInfo = "Report \"" .. output.mods.reportName .. "\" is available in\n"
         local reportInfoWidth = ImGui.CalcTextSize(reportInfo)
-        local pathWidth = ImGui.CalcTextSize(reports.mods.path)
+        local pathWidth = ImGui.CalcTextSize(output.mods.current)
 
         ImGui.Spacing()
         ImGuiExt.AlignNextItemToCenter(reportInfoWidth, contentRegionAvailX)
         ImGuiExt.TextAlt(reportInfo, true)
         ImGuiExt.AlignNextItemToCenter(pathWidth, contentRegionAvailX)
-        ImGuiExt.TextAlt(reports.mods.path, true)
+        ImGuiExt.TextAlt(output.mods.current, true)
         ImGui.Spacing()
     end
 
     ImGui.Text("")
-    -- ImGui.Separator()
-    -- ImGui.Text("")
-    -- ImGuiExt.AlignNextItemToCenter(300, contentRegionAvailX)
+    ImGui.Separator()
+    ImGuiExt.TextTitle("Get Paths", 0.9, true)
+    ImGui.Spacing()
 
-    -- if ImGui.Button("Browse Mods Files", 300, 0) then
-    --     ImGuiExt.AddTab("RootWindow.TabBar", "Mods Explorer", "", drawModsExplorer)
-    -- end
+    if output.paths.asLibs then
+        ImGui.BeginDisabled()
+        output.paths.includeLogs = false
+    end
 
-    -- ImGui.Text("")
+    output.paths.includeLogs = ImGuiExt.Checkbox("Include logs", output.paths.includeLogs)
+
+    if output.paths.asLibs then
+        ImGui.EndDisabled()
+    end
+
+    if isDev then
+        output.paths.asLibs = ImGuiExt.Checkbox("Save as \".libs\" file", output.paths.asLibs)
+    end
+
+    ImGui.Text("")
+    ImGuiExt.TextAlt("Relative paths to include:")
+
+    output.paths.requested = ImGui.InputTextMultiline("##FileName", output.paths.requested, 32768, contentRegionAvailX, 4 * ImGui.GetTextLineHeightWithSpacing())
+
+    local getPathsButtonWidth = ImGui.CalcTextSize("Get Paths") + 8 * itemSpacing.x
+
+    ImGuiExt.AlignNextItemToCenter(getPathsButtonWidth, contentRegionAvailX)
+
+    if ImGui.Button("Get Paths", getPathsButtonWidth, 0) then
+        parsePathInput()
+    end
+
+    ImGui.Text("")
+    ImGui.EndChildFrame()
+
+    if output.paths.isConfirmationPopup then
+        drawMappingConfirmationWindow()
+    end
 end
 
 local events = {}
 
 function events.onInit()
     initalizeModsReportSettings()
+    initalizeGetPathsSettings()
+end
+
+function events.onOverlayOpen()
+    if settings.getModSetting("debugMode") then
+        isDev = true
+    else
+        isDev = false
+    end
+end
+
+function events.onOverlayClose()
+    output.paths.isConfirmationPopup = false
 end
 
 return {
@@ -841,8 +1047,5 @@ return {
     -- },
     draw = draw,
     events = events,
-    -- inputs = {
-    --     { id = "generateModsReport", description = "Generate Mods Report", keyPressCallback = generateModsReport }
-    -- },
     openOnStart = true
 }

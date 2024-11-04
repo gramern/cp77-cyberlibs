@@ -45,7 +45,7 @@ local function getModules()
     local fileNameCount = {}
 
     for i, filePath in ipairs(loadedPaths) do
-        local fileName = utils.getFileName(filePath)
+        local fileName = utils.getPathLastComponent(filePath)
         local onScreenName = fileName
         fileNameCount[fileName] = (fileNameCount[fileName] or 0) + 1
         
@@ -104,8 +104,8 @@ local function tagModules(loadedModules)
     for _, v in ipairs(nativesTable) do nativesSet[utils.normalizePath(v)] = true end
     for _, v in ipairs(redmodBinariesTable) do redmodBinariesSet[utils.normalizePath(v)] = true end
 
-    for _, path in pairs(modsResourcesTable) do
-        modsResourcesSet[utils.normalizePath(path):lower()] = true
+    for _, relativePath in pairs(modsResourcesTable) do
+        modsResourcesSet[utils.normalizePath(relativePath):lower()] = true
     end
   
     for _, module in ipairs(loadedModules) do
@@ -254,7 +254,7 @@ local function openModule(onScreenName, fileName, filePath)
         ["TimeDateStamp"] = GameModules.GetTimeDateStamp(filePath),
         ["Version"] = Cyberlibs.GetVersion(filePath)
     }
-    
+
     local exportStruct = GameModules.GetExport(filePath)
 
     if next(exportStruct) then
@@ -306,7 +306,7 @@ local function drawViewerRow(label, value, rowWidth, labelWidth)
     ImGui.SetNextItemWidth(rowWidth - labelWidth)
 
     value = value or "-"
-    
+
     ImGui.InputText("##" .. label, tostring(value), 256)
 
     if ImGui.BeginPopupContextItem(label, ImGuiPopupFlags.MouseButtonRight) then
@@ -342,7 +342,7 @@ local function drawPopupContextExportTable(exportLabel, popupLabel, copyValue, c
             if pages.currentPage > 0 then
                 pages.currentPage = pages.currentPage - 1
             end
-    
+
             print(pages.currentPage)
         end
 
@@ -353,7 +353,7 @@ local function drawPopupContextExportTable(exportLabel, popupLabel, copyValue, c
             if pages.currentPage < pages.count - 1 then
                 pages.currentPage = pages.currentPage + 1
             end
-    
+
             print(pages.currentPage)
         end
 

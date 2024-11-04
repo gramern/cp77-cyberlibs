@@ -125,21 +125,6 @@ end
 ------------------
 
 ---@param filePath string
-function utils.getFileName(filePath)
-    filePath = filePath:match("^%[%[(.*)%]%]$") or filePath
-
-    return filePath:match(".*[/\\](.+)$") or filePath
-end
-
----@param fileName string
----@return string
-function utils.removeHashPrefix(fileName)
-    local start = string.find(fileName, "[^#%-]")
-
-    return start and string.sub(fileName, start) or fileName
-end
-
----@param filePath string
 ---@return string
 function utils.getPath(filePath)
     filePath = filePath:match("^%[%[(.*)%]%]$") or filePath
@@ -149,29 +134,47 @@ function utils.getPath(filePath)
     return dirPath or ""
 end
 
+---@param filePath string
+function utils.getPathLastComponent(filePath)
+    filePath = filePath:match("^%[%[(.*)%]%]$") or filePath
+
+    return filePath:match(".*[/\\](.+)$") or filePath
+end
+
+---@param filePath string
+---@return string
+function utils.getPathSecondLastComponent(filePath)
+    local dirPath = utils.getPath(filePath)
+
+    if dirPath == "" then
+        return ""
+    end
+    
+    return utils.getPathLastComponent(dirPath)
+end
+
 ---@param path string
 ---@return boolean
 function utils.isValidPath(path)
+    if path == "" then
+        return true
+    end
+
     if type(path) ~= "string" then
         return false
     end
 
     path = path:match("^%s*(.-)%s*$")
-
-    if path == "" then
-        return false
-    end
-
     local invalidChars = '[<>:"|%?%*]'
+
     if path:match(invalidChars) then
         return false
     end
 
-    local pathComponent = "[^/\\]+"
-
-    local isWindows = path:match("^[A-Za-z]:\\") ~= nil
+    local pathComponent = "[^/\\\\]+"
+    local isWindows = path:match("^[A-Za-z]:\\\\") ~= nil
     local isUnix = path:match("^/") ~= nil
-    
+
     if not (isWindows or isUnix) then
         local components = 0
 
@@ -187,15 +190,11 @@ function utils.isValidPath(path)
     end
 
     local components = 0
-
-    for comp in path:gmatch(pathComponent) do
+    
+    for _ in path:gmatch(pathComponent) do
         components = components + 1
-
-        if comp == "" then
-            return false
-        end
     end
-
+    
     return components > 0
 end
 
@@ -215,16 +214,31 @@ function utils.normalizePath(path, removeDriveLetter)
     return path
 end
 
----@param filePath string
+---@param fullPath string
+---@param prefixPath string
 ---@return string
-function utils.getLastDirectoryName(filePath)
-    local dirPath = utils.getPath(filePath)
+function utils.removePrefixPath(fullPath, prefixPath)
+    fullPath = utils.normalizePath(fullPath)
+    prefixPath = utils.normalizePath(prefixPath)
 
-    if dirPath == "" then
-        return ""
+    if fullPath:sub(1, #prefixPath) == prefixPath then
+        local result = fullPath:sub(#prefixPath + 1)
+        
+        if result:sub(1, 1) == "/" then
+            result = result:sub(2)
+        end
+        return result
     end
-    
-    return utils.getFileName(dirPath)
+
+    return fullPath
+end
+
+---@param fileName string
+---@return string
+function utils.removeHashPrefix(fileName)
+    local start = string.find(fileName, "[^#%-]")
+
+    return start and string.sub(fileName, start) or fileName
 end
 
 ------------------

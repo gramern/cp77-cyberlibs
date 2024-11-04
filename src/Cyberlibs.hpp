@@ -6,7 +6,7 @@
 
 namespace CyberlibsCore
 {
-class Cyberlibs
+struct Cyberlibs : Red::IScriptable
 {
 public:
     inline static Red::CString Version()
@@ -16,7 +16,6 @@ public:
 
     static void Help(Red::Optional<int32_t> number) {}
     inline static void SetPrintingStyle(bool isEnabled) {}
-
     inline static Red::CString GetVersion(const Red::CString& fileNameOrPath)
     {
         return CyberlibsCore::GameModules::GetVersion(fileNameOrPath);
