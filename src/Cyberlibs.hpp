@@ -35,8 +35,7 @@ public:
 };
 } // namespace CyberlibsCore
 
-RTTI_DEFINE_CLASS(CyberlibsCore::Cyberlibs,
-{
+RTTI_DEFINE_CLASS(CyberlibsCore::Cyberlibs, {
     RTTI_ALIAS("CyberlibsCore.Cyberlibs");
 
     RTTI_METHOD(Help);

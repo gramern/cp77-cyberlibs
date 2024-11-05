@@ -1309,14 +1309,14 @@ return {
 --     __VERSION = { 0, 1, 0}, -- optional
 --     __TITLE = "Tab Title", -- optional
 --     appApi = {
---         privateFunction = privateFunction
+--         appFunction = appFunction
 --     }, -- optional
 --     publicApi = {
 --         exposedFunction = exposedFunction,
 --     }, -- optional
 --     draw = draw, -- required
 --     drawSettings = drawSettings, -- optional
---     events = {}, -- optional, functions named: onInit, onOverlayOpen, onOverlayClose, onUpdate, onDraw
+--     events = {}, -- optional, functions named: onInit, onOverlayOpen, onOverlayClose, onUpdate, onDraw, onShutdown
 --     inputs = {
 --         { id = "exampleInput", description = "Describe Action", keyPressCallback = functionOnKeyPress, keyReleaseCallback = functionOnKeyRelease },
 --     } -- optional

@@ -31,7 +31,6 @@ Cyberlibs = {
         ]]
 }
 
-local isRootWindow = false
 local isDLL = true
 
 ------------------
@@ -56,6 +55,11 @@ local help = require("knowledgeBase/help")
 -- App Tables
 ------------------
 
+local appState = {
+    isRootWindow = false,
+    isRootWindowDisabled = false,
+}
+
 local publicApi = require("api/publicApi")
 local appApi = {}
 local appModules = {}
@@ -71,7 +75,15 @@ end
 
 ---@return boolean
 function appApi.isRootWindow()
-    return isRootWindow
+    return appState.isRootWindow
+end
+
+---@param isDisabled boolean
+---@return boolean
+function appApi.disableRootWindow(isDisabled)
+    appState.isRootWindowDisabled = isDisabled
+
+    return appState.isRootWindowDisabled
 end
 
 ---@param moduleFolderName string
@@ -451,6 +463,7 @@ end
 local function drawSettingsTab()
     local contentRegionAvailX = ImGui.GetContentRegionAvail()
     local itemSpacing = ImGui.GetStyle().ItemSpacing
+    local devBool, devToggle
     local debugBool, debugToggle
     local tabBarDropdownBool, tabBarDropdownToggle
     local tabOnMiddleClickBool, tabOnMiddleClickToggle
@@ -535,16 +548,23 @@ local function drawSettingsTab()
 
     ImGui.Text("")
     ImGui.Separator()
-    ImGuiExt.TextTitle("Debug", 0.9, true)
+    ImGuiExt.TextTitle("Developer & Debug", 0.9, true)
     ImGui.Spacing()
 
-    debugBool, debugToggle = ImGuiExt.Checkbox("Enable dev mode", settings.getModSetting("debugMode") or false, debugToggle)
+    devBool, devToggle = ImGuiExt.Checkbox("Enable developer tools", settings.getModSetting("developerTools") or false, devToggle)
+    if devToggle then
+        settings.setModSetting("developerTools", devBool)
+    end
+
+    ImGuiExt.SetTooltip("Enable developer tools. Some options may require reopening the overlay to work.")
+
+    debugBool, debugToggle = ImGuiExt.Checkbox("Enable debug mode", settings.getModSetting("debugMode") or false, debugToggle)
     if debugToggle then
         settings.setModSetting("debugMode", debugBool)
         logger.setDebug(settings.getModSetting("debugMode"))
     end
 
-    ImGuiExt.SetTooltip("Enable dev mode. Some options may require reopening the overlay to work.")
+    ImGuiExt.SetTooltip("Enable debug mode. Some options may require reopening the overlay to work.")
     ImGui.Text("")
 
     if debugBool then
@@ -699,6 +719,10 @@ local function drawRootWindow()
     ImGui.SetNextWindowPos(400, 200, ImGuiCond.FirstUseEver)
     ImGui.SetNextWindowSize(780 * ImGuiExt.GetScaleFactor(), 0)
 
+    if appState.isRootWindowDisabled then
+        ImGui.BeginDisabled()
+    end
+
     if ImGui.Begin(Cyberlibs.__NAME) then
         local activeFilter = search.getActiveFilter()
         local resolutionFactor = ImGuiExt.GetResolutionFactor()
@@ -739,6 +763,11 @@ local function drawRootWindow()
     end
 
     ImGui.End()
+
+    if appState.isRootWindowDisabled then
+        ImGui.EndDisabled()
+    end
+
     ImGuiExt.PopStyle()
 end
 
@@ -769,7 +798,8 @@ registerForEvent("onInit", function()
 end)
 
 registerForEvent("onOverlayOpen", function()
-    isRootWindow = true
+    appState.isRootWindow = true
+    appState.isRootWindowDisabled = false
 
     settings.onOverlayOpen()
     ImGuiExt.onOverlayOpen()
@@ -781,7 +811,8 @@ registerForEvent("onOverlayOpen", function()
 end)
 
 registerForEvent("onOverlayClose", function()
-    isRootWindow = false
+    appState.isRootWindow = false
+    appState.isRootWindowDisabled = false
 
     search.flushBrowse()
     search.flushFilter()
@@ -802,13 +833,17 @@ end)
 registerForEvent("onDraw", function()
     ImGuiExt.Notification()
 
-    if isRootWindow then
+    if appState.isRootWindow then
         drawRootWindow()
     end
 
     if not isDLL then return end
 
     fireAppModulesEvents("onDraw")
+end)
+
+registerForEvent("onShutdown", function()
+    fireAppModulesEvents("onShutdown")
 end)
 
 return Cyberlibs

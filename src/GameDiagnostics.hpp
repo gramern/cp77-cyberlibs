@@ -2,6 +2,7 @@
 
 #include <RED4ext/RED4ext.hpp>
 #include <RedLib.hpp>
+#include <sha256.h>
 #include <Structs.hpp>
 
 #include <chrono>
@@ -17,6 +18,8 @@ struct GameDiagnostics : Red::IScriptable
 {
 public:
     static Red::CString GetCurrentTimeDate(Red::Optional<bool> pathFirendly);
+    static Red::CString GetFileHash(const Red::CString& relativeFilePath);
+    static void GetFileHashAsync(const Red::CString& relativeFilePath, const CyberlibsCore::GameDiagnosticsHashPromise& promise);
     static Red::CString GetGamePath();
     static Red::CString GetTimeDateStamp(const Red::CString& relativeFilePath, Red::Optional<bool> pathFriendly);
     static bool IsFile(const Red::CString& relativeFilePath);
@@ -24,6 +27,8 @@ public:
     static Red::DynArray<GameDiagnosticsPathEntry> ListDirectory(const Red::CString& relativePath);
     static Red::CString ReadTextFile(const Red::CString& relativeFilePath);
     static bool VerifyPaths(const Red::CString& relativePathsFilePath);
+    static void VerifyPathsAsync(const Red::CString& relativePathsFilePath,
+                                 const CyberlibsCore::GameDiagnosticsVerifyPathsPromise& promise);
     static bool WriteToOutput(const Red::CString& relativeFilePath, const Red::CString& content,
                             Red::Optional<bool> append);
 
@@ -31,8 +36,12 @@ public:
     RTTI_IMPL_ALLOCATOR();
 
 private:
-    static constexpr size_t MAX_INPUT_FILE_SIZE = 6 * 1024 * 1024;
+    static constexpr size_t MAX_INPUT_FILE_SIZE = 5 * 1024 * 1024;
     static constexpr size_t MAX_OUTPUT_FILE_SIZE = 5 * 1024 * 1024;
+    static constexpr const char* FILE_LOCKED = "File locked";
+    static constexpr const char* FILE_READ_FAIL = "Failed to read file";
+    static constexpr const char* INVALID_GAME_PATH = "Invalid game path";
+    static constexpr const char* UNKNOWN_VALUE = "Unknown";
     static constexpr const char* VALID_TEXT_EXTENSIONS[] = {".txt", ".log", ".md"};
 
     struct PathValidation
@@ -60,6 +69,8 @@ RTTI_DEFINE_CLASS(CyberlibsCore::GameDiagnostics, {
     RTTI_ALIAS("CyberlibsCore.GameDiagnostics");
 
     RTTI_METHOD(GetCurrentTimeDate);
+    RTTI_METHOD(GetFileHash);
+    RTTI_METHOD(GetFileHashAsync);
     RTTI_METHOD(GetGamePath);
     RTTI_METHOD(GetTimeDateStamp);
     RTTI_METHOD(IsFile);
@@ -67,5 +78,6 @@ RTTI_DEFINE_CLASS(CyberlibsCore::GameDiagnostics, {
     RTTI_METHOD(ListDirectory);
     RTTI_METHOD(ReadTextFile);
     RTTI_METHOD(VerifyPaths);
+    RTTI_METHOD(VerifyPathsAsync);
     RTTI_METHOD(WriteToOutput);
 });

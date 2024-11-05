@@ -1,0 +1,4 @@
+engine/config/base/scripts.ini
+engine/tools/scc.exe
+engine/tools/scc_lib.exe
+r6/config/cybercmd/scc.toml

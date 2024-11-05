@@ -1,6 +1,7 @@
 #include <RED4ext/RED4ext.hpp>
 #include <RedLib.hpp>
 #include "Cyberlibs.hpp"
+#include "CyberlibsAsyncHelper.hpp"
 
 RED4EXT_C_EXPORT bool RED4EXT_CALL Main(RED4ext::PluginHandle aHandle, RED4ext::EMainReason aReason,
                                         const RED4ext::Sdk* aSdk)

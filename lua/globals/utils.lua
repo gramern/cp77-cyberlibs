@@ -11,7 +11,7 @@ local delays = {}
 local logger = require("globals/logger")
 
 local floor, max = math.max, math.floor
-local stringFind, stringRep, stringSub = string.find, string.rep, string.sub
+local stringFind, stringGmatch, stringGsub, stringLower, stringMatch, stringRep, stringSub = string.find, string.gmatch, string.gsub, string.lower, string.match, string.rep, string.sub
 local tableConcat, tableInsert = table.concat, table.insert
 
 ------------------
@@ -22,17 +22,17 @@ local tableConcat, tableInsert = table.concat, table.insert
 ---@return table
 function utils.parseTimeDateStamp(timeDateStamp)
     local year, month, day, hour, min, sec, msec =
-    timeDateStamp:match("(%d+)-(%d+)-(%d+)%s+(%d+):(%d+):(%d+)%.(%d+)")
+    stringMatch(timeDateStamp, "(%d+)-(%d+)-(%d+)%s+(%d+):(%d+):(%d+)%.(%d+)")
 
     if not year then
         year, month, day, hour, min, sec =
-            timeDateStamp:match("(%d+)-(%d+)-(%d+)%s+(%d+):(%d+):(%d+)")
+            stringMatch(timeDateStamp, "(%d+)-(%d+)-(%d+)%s+(%d+):(%d+):(%d+)")
         msec = "0"
     end
 
     if not year then
         year, month, day, hour, min, sec =
-            timeDateStamp:match("(%d+)-(%d+)-(%d+)-(%d+)-(%d+)-(%d+)")
+            stringMatch(timeDateStamp, "(%d+)-(%d+)-(%d+)-(%d+)-(%d+)-(%d+)")
         msec = "0"
     end
 
@@ -127,18 +127,18 @@ end
 ---@param filePath string
 ---@return string
 function utils.getPath(filePath)
-    filePath = filePath:match("^%[%[(.*)%]%]$") or filePath
+    filePath = stringMatch(filePath, "^%[%[(.*)%]%]$") or filePath
 
-    local dirPath = filePath:match("^(.+)[/\\][^/\\]*$")
+    local dirPath = stringMatch(filePath, "^(.+)[/\\][^/\\]*$")
 
     return dirPath or ""
 end
 
 ---@param filePath string
 function utils.getPathLastComponent(filePath)
-    filePath = filePath:match("^%[%[(.*)%]%]$") or filePath
+    filePath = stringMatch(filePath, "^%[%[(.*)%]%]$") or filePath
 
-    return filePath:match(".*[/\\](.+)$") or filePath
+    return stringMatch(filePath, ".*[/\\](.+)$") or filePath
 end
 
 ---@param filePath string
@@ -164,21 +164,21 @@ function utils.isValidPath(path)
         return false
     end
 
-    path = path:match("^%s*(.-)%s*$")
+    path = stringMatch(path, "^%s*(.-)%s*$")
     local invalidChars = '[<>:"|%?%*]'
 
-    if path:match(invalidChars) then
+    if stringMatch(path, invalidChars) then
         return false
     end
 
     local pathComponent = "[^/\\\\]+"
-    local isWindows = path:match("^[A-Za-z]:\\\\") ~= nil
-    local isUnix = path:match("^/") ~= nil
+    local isWindows = stringMatch(path, "^[A-Za-z]:\\\\") ~= nil
+    local isUnix = stringMatch(path, "^/") ~= nil
 
     if not (isWindows or isUnix) then
         local components = 0
 
-        for comp in path:gmatch(pathComponent) do
+        for comp in stringGmatch(path, pathComponent) do
             components = components + 1
 
             if comp ~= "." and comp ~= ".." then
@@ -191,7 +191,7 @@ function utils.isValidPath(path)
 
     local components = 0
     
-    for _ in path:gmatch(pathComponent) do
+    for _ in stringGmatch(path, pathComponent) do
         components = components + 1
     end
     
@@ -202,14 +202,14 @@ end
 ---@param removeDriveLetter boolean?
 ---@return string
 function utils.normalizePath(path, removeDriveLetter)
-    path = path:gsub("\\", "/")
-    path = path:lower()
+    path = stringGsub(path, "\\", "/")
+    path = stringLower(path)
 
     if removeDriveLetter then
-        path = path:gsub("^%a:", "")
+        path = stringGsub(path, "^%a:", "")
     end
 
-    path = path:gsub("^/", "")
+    path = stringGsub(path, "^/", "")
 
     return path
 end
@@ -219,13 +219,13 @@ end
 function utils.parsePaths(paths)
     local result = {}
 
-    for path in paths:gmatch("[^;]+") do
-        path = path:match("^%s*(.-)%s*$")
+    for path in stringGmatch(paths, "[^;]+") do
+        path = stringMatch(path, "^%s*(.-)%s*$")
 
         if path ~= "" then
-            path = path:gsub("\\\\", "/")
-            path = path:gsub("\\", "/")
-            path = path:gsub("/$", "")
+            path = stringGsub(path, "\\\\", "/")
+            path = stringGsub(path, "\\", "/")
+            path = stringGsub(path, "/$", "")
 
             table.insert(result, path)
         end
@@ -241,11 +241,11 @@ function utils.removePrefixPath(fullPath, prefixPath)
     fullPath = utils.normalizePath(fullPath)
     prefixPath = utils.normalizePath(prefixPath)
 
-    if fullPath:sub(1, #prefixPath) == prefixPath then
+    if stringSub(fullPath, 1, #prefixPath) == prefixPath then
         local result = fullPath:sub(#prefixPath + 1)
         
         if result:sub(1, 1) == "/" then
-            result = result:sub(2)
+            result = stringSub(result, 2)
         end
         return result
     end
@@ -256,9 +256,9 @@ end
 ---@param fileName string
 ---@return string
 function utils.removeHashPrefix(fileName)
-    local start = string.find(fileName, "[^#%-]")
+    local start = stringFind(fileName, "[^#%-]")
 
-    return start and string.sub(fileName, start) or fileName
+    return start and stringSub(fileName, start) or fileName
 end
 
 ------------------
@@ -315,7 +315,7 @@ end
 function utils.parseMultiline(text)
     local lines = {}
 
-    for line in text:gmatch("([^\n\r]*)\r?\n?") do
+    for line in stringGmatch(text, "([^\n\r]*)\r?\n?") do
         tableInsert(lines, line)
     end
 
@@ -333,9 +333,9 @@ function utils.indentString(text, spaces, preserveAsBlock)
         local minIndent = math.huge
 
         for _, line in ipairs(lines) do
-            local currentIndent = #(line:match("^ *"))
+            local currentIndent = #(stringMatch(line, "^ *"))
 
-            if currentIndent < minIndent and #line:gsub("^%s+", "") > 0 then
+            if currentIndent < minIndent and #stringGsub(line, "^%s+", "") > 0 then
                 minIndent = currentIndent
             end
         end
@@ -349,9 +349,9 @@ function utils.indentString(text, spaces, preserveAsBlock)
         end
     else
         for i, line in ipairs(lines) do
-            local currentSpaces = #(line:match("^ *"))
+            local currentSpaces = #(stringMatch(line, "^ *"))
             local newSpaces = max(0, currentSpaces + spaces)
-            lines[i] = stringRep(" ", newSpaces) .. line:match("^ *(.*)")
+            lines[i] = stringRep(" ", newSpaces) .. stringMatch(line, "^ *(.*)")
         end
     end
 

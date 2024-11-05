@@ -20,6 +20,144 @@ Red::CString CyberlibsCore::GameDiagnostics::GetCurrentTimeDate(Red::Optional<bo
     return Red::CString(ss.str().c_str());
 }
 
+Red::CString CyberlibsCore::GameDiagnostics::GetFileHash(const Red::CString& relativeFilePath)
+{
+    try
+    {
+        auto gamePath = GetGamePath();
+        if (gamePath.Length() == 0)
+        {
+            return INVALID_GAME_PATH;
+        }
+
+        std::string normalizedPath = normalizePathString(relativeFilePath);
+        std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / normalizedPath;
+        fullPath = fullPath.lexically_normal();
+        if (!isPathSafe(fullPath) || !std::filesystem::exists(fullPath) || !std::filesystem::is_regular_file(fullPath))
+        {
+            return UNKNOWN_VALUE;
+        }
+
+        HANDLE hFile = CreateFileW(fullPath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
+                                   FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+
+        if (hFile == INVALID_HANDLE_VALUE)
+        {
+            return FILE_LOCKED;
+        }
+
+        std::unique_ptr<void, decltype(&CloseHandle)> fileGuard(hFile, CloseHandle);
+        struct sha256_buff sha_buff;
+        sha256_init(&sha_buff);
+        uint8_t buffer[8192];
+        DWORD bytesRead = 0;
+
+        while (true)
+        {
+            if (!ReadFile(hFile, buffer, sizeof(buffer), &bytesRead, NULL))
+            {
+                return FILE_READ_FAIL;
+            }
+
+            if (bytesRead == 0)
+            {
+                break;
+            }
+
+            sha256_update(&sha_buff, buffer, bytesRead);
+        }
+
+        sha256_finalize(&sha_buff);
+        char hashStr[65] = {0};
+        sha256_read_hex(&sha_buff, hashStr);
+
+        return Red::CString(hashStr);
+    }
+    catch (const std::exception& e)
+    {
+        std::string errorMsg = "Exception: ";
+        errorMsg += e.what();
+        return Red::CString(errorMsg.c_str());
+    }
+}
+
+void CyberlibsCore::GameDiagnostics::GetFileHashAsync(const Red::CString& relativeFilePath,
+                                                      const CyberlibsCore::GameDiagnosticsHashPromise& promise)
+{
+    Red::JobQueue job_queue;
+
+    job_queue.Dispatch(
+        [relativeFilePath, promise]() -> void
+        {
+            try
+            {
+                auto gamePath = GetGamePath();
+                if (gamePath.Length() == 0)
+                {
+                    promise.Error(INVALID_GAME_PATH);
+
+                    return;
+                }
+
+                std::string normalizedPath = normalizePathString(relativeFilePath);
+                std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / normalizedPath;
+                fullPath = fullPath.lexically_normal();
+                if (!isPathSafe(fullPath) || !std::filesystem::exists(fullPath) || !std::filesystem::is_regular_file(fullPath))
+                {
+                    promise.Error(UNKNOWN_VALUE);
+
+                    return;
+                }
+
+                HANDLE hFile =
+                    CreateFileW(fullPath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+
+                if (hFile == INVALID_HANDLE_VALUE)
+                {
+                    promise.Error(FILE_LOCKED);
+
+                    return;
+                }
+
+                std::unique_ptr<void, decltype(&CloseHandle)> fileGuard(hFile, CloseHandle);
+                struct sha256_buff sha_buff;
+                sha256_init(&sha_buff);
+                uint8_t buffer[8192];
+                DWORD bytesRead = 0;
+
+                while (true)
+                {
+                    if (!ReadFile(hFile, buffer, sizeof(buffer), &bytesRead, NULL))
+                    {
+                        promise.Error(FILE_READ_FAIL);
+
+                        return;
+                    }
+
+                    if (bytesRead == 0)
+                    {
+                        break;
+                    }
+
+                    sha256_update(&sha_buff, buffer, bytesRead);
+                }
+
+                sha256_finalize(&sha_buff);
+                char hashStr[65] = {0};
+                sha256_read_hex(&sha_buff, hashStr);
+
+                promise.Success(Red::CString(hashStr));
+            }
+            catch (const std::exception& e)
+            {
+                std::string errorMsg = "Exception: ";
+                errorMsg += e.what();
+                promise.Error(Red::CString(errorMsg.c_str()));
+            }
+        });
+}
+
 Red::CString CyberlibsCore::GameDiagnostics::GetGamePath()
 {
     try
@@ -28,7 +166,7 @@ Red::CString CyberlibsCore::GameDiagnostics::GetGamePath()
         DWORD length = GetModuleFileNameW(NULL, path, sizeof(path) / sizeof(wchar_t));
         if (length == 0 || length >= sizeof(path) / sizeof(wchar_t))
         {
-            return Red::CString("");
+            return INVALID_GAME_PATH;
         }
 
         std::filesystem::path gamePath = std::filesystem::path(path).lexically_normal();
@@ -36,9 +174,11 @@ Red::CString CyberlibsCore::GameDiagnostics::GetGamePath()
 
         return Red::CString(gamePath.string().c_str());
     }
-    catch (const std::exception&)
+    catch (const std::exception& e)
     {
-        return Red::CString("");
+        std::string errorMsg = "Exception: ";
+        errorMsg += e.what();
+        return Red::CString(errorMsg.c_str());
     }
 }
 
@@ -50,28 +190,27 @@ Red::CString CyberlibsCore::GameDiagnostics::GetTimeDateStamp(const Red::CString
         auto gamePath = GetGamePath();
         if (gamePath.Length() == 0)
         {
-            return Red::CString("");
+            return INVALID_GAME_PATH;
         }
 
         std::string normalizedPath = normalizePathString(relativeFilePath);
         std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / normalizedPath;
         fullPath = fullPath.lexically_normal();
-
         if (!isPathSafe(fullPath))
         {
-            return Red::CString("");
+            return UNKNOWN_VALUE;
         }
 
         WIN32_FILE_ATTRIBUTE_DATA fileInfo;
         if (!GetFileAttributesExW(fullPath.c_str(), GetFileExInfoStandard, &fileInfo))
         {
-            return Red::CString("");
+            return UNKNOWN_VALUE;
         }
 
         if ((fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ||
             (fileInfo.dwFileAttributes & FILE_ATTRIBUTE_DEVICE))
         {
-            return Red::CString("");
+            return UNKNOWN_VALUE;
         }
 
         SYSTEMTIME systemTime;
@@ -93,9 +232,11 @@ Red::CString CyberlibsCore::GameDiagnostics::GetTimeDateStamp(const Red::CString
 
         return Red::CString(buffer);
     }
-    catch (const std::exception&)
+    catch (const std::exception& e)
     {
-        return Red::CString("");
+        std::string errorMsg = "Exception: ";
+        errorMsg += e.what();
+        return Red::CString(errorMsg.c_str());
     }
 }
 
@@ -159,7 +300,6 @@ Red::DynArray<CyberlibsCore::GameDiagnosticsPathEntry> CyberlibsCore::GameDiagno
         std::string normalizedPath = normalizePathString(relativePath);
         std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / normalizedPath;
         fullPath = fullPath.lexically_normal();
-
         if (!isPathSafe(fullPath) || !std::filesystem::exists(fullPath) || !std::filesystem::is_directory(fullPath))
         {
             return result;
@@ -190,22 +330,16 @@ Red::CString CyberlibsCore::GameDiagnostics::ReadTextFile(const Red::CString& re
         auto gamePath = GetGamePath();
         if (gamePath.Length() == 0)
         {
-            return Red::CString("");
+            return INVALID_GAME_PATH;
         }
 
         std::string normalizedPath = normalizePathString(relativeFilePath);
         std::filesystem::path fullPath = std::filesystem::path(gamePath.c_str()) / normalizedPath;
         fullPath = fullPath.lexically_normal();
-
         if (!isPathSafe(fullPath) || !std::filesystem::exists(fullPath) ||
             !std::filesystem::is_regular_file(fullPath) || !isTextFile(fullPath))
         {
-            return Red::CString("");
-        }
-
-        if (!isTextFile(fullPath))
-        {
-            return Red::CString("");
+            return UNKNOWN_VALUE;
         }
 
         HANDLE hFile = CreateFileW(fullPath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
@@ -213,7 +347,7 @@ Red::CString CyberlibsCore::GameDiagnostics::ReadTextFile(const Red::CString& re
 
         if (hFile == INVALID_HANDLE_VALUE)
         {
-            return Red::CString("");
+            return FILE_LOCKED;
         }
 
         std::unique_ptr<void, decltype(&CloseHandle)> fileGuard(hFile, CloseHandle);
@@ -221,7 +355,7 @@ Red::CString CyberlibsCore::GameDiagnostics::ReadTextFile(const Red::CString& re
         LARGE_INTEGER fileSize;
         if (!GetFileSizeEx(hFile, &fileSize) || fileSize.QuadPart > MAX_OUTPUT_FILE_SIZE)
         {
-            return Red::CString("");
+            return FILE_READ_FAIL;
         }
 
         std::string content;
@@ -231,21 +365,23 @@ Red::CString CyberlibsCore::GameDiagnostics::ReadTextFile(const Red::CString& re
         if (!ReadFile(hFile, content.data(), static_cast<DWORD>(content.size()), &bytesRead, NULL) ||
             bytesRead != content.size())
         {
-            return Red::CString("");
+            return FILE_READ_FAIL;
         }
 
         fileGuard.reset();
 
         if (!isValidUtf8(content))
         {
-            return Red::CString("");
+            return FILE_READ_FAIL;
         }
 
         return Red::CString(content.c_str());
     }
-    catch (const std::exception&)
+    catch (const std::exception& e)
     {
-        return Red::CString("");
+        std::string errorMsg = "Exception: ";
+        errorMsg += e.what();
+        return Red::CString(errorMsg.c_str());
     }
 }
 
@@ -306,7 +442,6 @@ bool CyberlibsCore::GameDiagnostics::VerifyPaths(const Red::CString& relativePat
             }
 
             bool exists = std::filesystem::exists(pathToCheck);
-
             if (validation.shouldExist != exists)
             {
                 return false;
@@ -321,13 +456,103 @@ bool CyberlibsCore::GameDiagnostics::VerifyPaths(const Red::CString& relativePat
     }
 }
 
+void CyberlibsCore::GameDiagnostics::VerifyPathsAsync(const Red::CString& relativePathsFilePath,
+                                                      const GameDiagnosticsVerifyPathsPromise& promise)
+{
+    Red::JobQueue job_queue;
+
+    job_queue.Dispatch(
+        [relativePathsFilePath, promise]() -> void
+        {
+            try
+            {
+                auto gamePath = GetGamePath();
+                if (gamePath.Length() == 0)
+                {
+                    promise.Resolve(false);
+
+                    return;
+                }
+
+                std::string normalizedInputPath = relativePathsFilePath.c_str();
+                std::replace(normalizedInputPath.begin(), normalizedInputPath.end(), '\\', '/');
+                std::filesystem::path inputPath = std::filesystem::path(gamePath.c_str()) / normalizedInputPath;
+                inputPath = inputPath.lexically_normal();
+
+                if (!isPathSafe(inputPath) || !std::filesystem::exists(inputPath) ||
+                    !std::filesystem::is_regular_file(inputPath))
+                {
+                    promise.Resolve(false);
+
+                    return;
+                }
+
+                auto extension = inputPath.extension().string();
+                std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+                if (extension != ".paths")
+                {
+                    promise.Resolve(false);
+
+                    return;
+                }
+
+                auto validations = readLines(inputPath);
+                if (validations.empty())
+                {
+                    promise.Resolve(false);
+
+                    return;
+                }
+
+                const std::filesystem::path gameRoot = std::filesystem::path(gamePath.c_str()).lexically_normal();
+
+                for (const auto& validation : validations)
+                {
+                    std::string cleanPath = validation.path;
+                    std::replace(cleanPath.begin(), cleanPath.end(), '\\', '/');
+                    if (cleanPath.empty() || cleanPath[0] == '#')
+                    {
+                        continue;
+                    }
+
+                    while (!cleanPath.empty() && (cleanPath[0] == '/' || cleanPath[0] == '\\'))
+                    {
+                        cleanPath = cleanPath.substr(1);
+                    }
+
+                    std::filesystem::path pathToCheck = gameRoot / cleanPath;
+                    pathToCheck = pathToCheck.lexically_normal();
+                    if (!isPathSafe(pathToCheck))
+                    {
+                        promise.Resolve(false);
+
+                        return;
+                    }
+
+                    bool exists = std::filesystem::exists(pathToCheck);
+                    if (validation.shouldExist != exists)
+                    {
+                        promise.Resolve(false);
+
+                        return;
+                    }
+                }
+
+                promise.Resolve(true);
+            }
+            catch (const std::exception&)
+            {
+                promise.Resolve(false);
+            }
+        });
+}
+
 bool CyberlibsCore::GameDiagnostics::WriteToOutput(const Red::CString& relativeFilePath, const Red::CString& content,
                                                    Red::Optional<bool> append)
 {
     try
     {
         std::string normalizedPath = normalizePathString(relativeFilePath);
-
         if (normalizedPath.find('/') == std::string::npos)
         {
             return false;
@@ -426,7 +651,6 @@ std::filesystem::path CyberlibsCore::GameDiagnostics::getOutputPath(const Red::C
         std::filesystem::path fullPath = basePath / cleanPath;
         std::filesystem::path normalizedPath = fullPath.lexically_normal();
         std::string basePathStr = basePath.lexically_normal().string();
-
         if (normalizedPath.string().substr(0, basePathStr.length()) != basePathStr)
         {
             return std::filesystem::path();

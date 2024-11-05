@@ -17,8 +17,6 @@ local mods = {}
 
 local output = {}
 
-local isDev = false
-
 local function getModsResourceName(filePath)
     local modsResources = require("knowledgeBase/modsResources")
     local modsResourcesTable = modsResources.getTable()
@@ -654,8 +652,7 @@ local function initalizeGetPathsSettings()
     output.paths = {
         asPaths = false,
         includeLogs = false,
-        current = "",
-        requested = ""
+        requestedLocations = ""
     }
 end
 
@@ -738,15 +735,22 @@ local function getPaths(dirMap, currentPath, result)
     end
 end
 
-local function generatePaths(path, includeLogs)
+local function generatePaths(location, includeLogs)
     local gamePath = GameDiagnostics.GetGamePath()
-    path = utils.removePrefixPath(path, gamePath)
-    local result = getPaths(mapDirectory(path, includeLogs))
-
+    location = utils.removePrefixPath(location, gamePath)
+    local result = getPaths(mapDirectory(location, includeLogs))
     local pathsString = ""
 
-    for _, line in ipairs(result) do
-        pathsString = pathsString .. line .. "\n"
+    for i, line in ipairs(result) do
+        if location ~= "" then
+            pathsString = pathsString .. location .. "/" .. line
+        else
+            pathsString = pathsString .. line
+        end
+
+        if i < #result then
+            pathsString = pathsString .. "\n"
+        end
     end
 
     return pathsString
@@ -755,9 +759,10 @@ end
 local function drawInvalidLocationInfo(invalidLocations)
     local screenWidth, screenHeight = GetDisplayResolution()
     local itemSpacing = ImGui.GetStyle().ItemSpacing
+    local windowWidth = 480
 
-    ImGui.SetNextWindowPos(screenWidth / 2 - 160, screenHeight / 2 - 120)
-    ImGui.SetNextWindowSize(480, 0)
+    ImGui.SetNextWindowPos((screenWidth - windowWidth) / 2, screenHeight / 2 - 120)
+    ImGui.SetNextWindowSize(windowWidth, 0)
 
     if ImGui.Begin("Invalid Path", ImGuiWindowFlags.AlwaysAutoResize + ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.None) then
         ImGui.Spacing()
@@ -766,10 +771,10 @@ local function drawInvalidLocationInfo(invalidLocations)
         ImGuiExt.TextAlt("The requested path(s): ")
 
         for _, location in ipairs(invalidLocations) do
-            ImGuiExt.TextAlt(location, true)
+            ImGuiExt.TextColor(location, 1, 0, 0, 1, true)
         end
         
-        ImGuiExt.TextAlt("aren't valid relative paths to locations within the game's main directory.", true)
+        ImGuiExt.TextAlt("is(are) not valid relative path(s) to locations within the game's base directory.", true)
         ImGui.Indent(- itemSpacing.x)
         ImGui.Spacing()
 
@@ -781,6 +786,8 @@ local function drawInvalidLocationInfo(invalidLocations)
         if ImGui.Button("Ok", button_width, 0) then
             output.paths.invalidLocations = nil
             output.paths.isInvalidLocationsPopup = false
+
+            app.disableRootWindow(output.paths.isInvalidLocationsPopup)
         end
 
         ImGui.Spacing()
@@ -810,24 +817,59 @@ local function isModLocation(locationPath)
     return false
 end
 
+local function dumpPaths(requestedLocations)
+    ImGuiExt.SetNotification(0, "Generating Paths...")
+
+    local fileName = ""
+
+    if #requestedLocations == 1 and requestedLocations[1] ~= "" then
+        fileName = string.gsub(utils.getPathLastComponent(requestedLocations[1]), "[/\\]+", "")
+    elseif #requestedLocations == 1 then
+        fileName = "Cyberpunk 2077"
+    else
+        fileName = "requested"
+    end
+
+    fileName = fileName .. (not output.paths.asPaths and "-paths" or "") .. "-" .. GameDiagnostics.GetCurrentTimeDate(true)
+    local extension = not output.paths.asPaths and ".txt" or ".paths"
+    local filePath = "_PATHS\\" .. fileName .. extension
+    local result = ""
+
+    for i, location in ipairs(requestedLocations) do
+        if not output.paths.asPaths then
+            result = result .. style.formatHeader(location) .. "\n"
+        end
+
+        result = result .. generatePaths(location, output.paths.includeLogs)
+
+        if i < #requestedLocations then
+            result = result .. "\n"
+        end
+    end
+
+    GameDiagnostics.WriteToOutput(filePath, result)
+    ImGuiExt.SetNotification(2, "Requested Paths Are Ready.")
+end
+
 local function drawGetPathsConfirmation(nonStandardLocations)
     local screenWidth, screenHeight = GetDisplayResolution()
     local itemSpacing = ImGui.GetStyle().ItemSpacing
+    local windowWidth = 480
 
-    ImGui.SetNextWindowPos(screenWidth / 2 - 160, screenHeight / 2 - 120)
-    ImGui.SetNextWindowSize(480, 0)
+    ImGui.SetNextWindowPos((screenWidth - windowWidth) / 2, screenHeight / 2 - 120)
+    ImGui.SetNextWindowSize(windowWidth, 0)
 
-    if ImGui.Begin("Confirm Path", ImGuiWindowFlags.AlwaysAutoResize + ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.None) then
+    if ImGui.Begin("Confirm Locations", ImGuiWindowFlags.AlwaysAutoResize + ImGuiWindowFlags.NoCollapse + ImGuiWindowFlags.None) then
         ImGui.Spacing()
         ImGui.Spacing()
         ImGui.Indent(itemSpacing.x)
-        ImGuiExt.TextAlt("The requested path(s): ")
+        ImGuiExt.TextAlt("The requested location(s): ")
 
         for _, location in ipairs(nonStandardLocations) do
             ImGuiExt.TextAlt(location, true)
         end
 
-        ImGuiExt.TextAlt("is/are not standard mod's path. Are you sure?")
+        ImGuiExt.TextAlt("is(are) not standard mod's location(s). Are you sure?")
         ImGui.Indent(- itemSpacing.x)
         ImGui.Spacing()
 
@@ -838,7 +880,10 @@ local function drawGetPathsConfirmation(nonStandardLocations)
 
         if ImGui.Button("No", button_width, 0) then
             output.paths.nonStandardLocations = nil
+            output.paths.requestedLocationsTable = nil
             output.paths.isConfirmationPopup = false
+
+            app.disableRootWindow(output.paths.isConfirmationPopup)
         end
 
         ImGui.SameLine()
@@ -846,6 +891,11 @@ local function drawGetPathsConfirmation(nonStandardLocations)
         if ImGui.Button("Yes", button_width, 0) then
             output.paths.nonStandardLocations = nil
             output.paths.isConfirmationPopup = false
+
+            app.disableRootWindow(output.paths.isConfirmationPopup)
+            dumpPaths(output.paths.requestedLocationsTable)
+
+            output.paths.requestedLocationsTable = nil
         end
 
         ImGui.Spacing()
@@ -855,13 +905,21 @@ local function drawGetPathsConfirmation(nonStandardLocations)
     ImGui.End()
 end
 
-local function parseRequestedPaths()
-    local requestedLocations = utils.parsePaths(output.paths.requested)
-
+local function parseRequestedLocations()
     output.paths.invalidLocations = {}
+    output.paths.nonStandardLocations = {}
+    local requestedLocations = {}
+
+    if output.paths.requestedLocations ~= "" then
+        requestedLocations = utils.parsePaths(output.paths.requestedLocations)
+    else
+        requestedLocations = { "" }
+    end
 
     for _, location in ipairs(requestedLocations) do
-        if not utils.isValidPath(location) and not GameDiagnostics.IsDirectory(location) then
+        print(location)
+
+        if not utils.isValidPath(location) or not GameDiagnostics.IsDirectory(location) then
             table.insert(output.paths.invalidLocations, location)
         end
     end
@@ -869,15 +927,19 @@ local function parseRequestedPaths()
     if next(output.paths.invalidLocations) then
         output.paths.isInvalidLocationsPopup = true
 
-        ImGuiExt.SetStatusBar("Enter a valid relative path for a location within the game's main directory.")
+        ImGuiExt.SetStatusBar("Enter valid relative path(s) to location(s) within the game's base directory.")
 
         return
     end
 
-    output.paths.nonStandardLocations = {}
+    output.paths.requestedLocationsTable = requestedLocations
 
     for _, location in ipairs(requestedLocations) do
         if not isModLocation(location) then
+            if location == "" then
+                location = "The game's base directory"
+            end
+
             table.insert(output.paths.nonStandardLocations, location)
         end
     end
@@ -888,29 +950,7 @@ local function parseRequestedPaths()
         return
     end
 
-    ImGuiExt.SetNotification(0, "Generating Paths...")
-
-    local fileName = ""
-
-    if #requestedLocations == 1 then
-        fileName = string.gsub(utils.getPathLastComponent(requestedLocations[1]), "[/\\]+", "")
-    elseif #requestedLocations == 1 and requestedLocations[1] == "" then
-        fileName = "Cyberpunk-2077"
-    else
-        fileName = "requested"
-    end
-
-    fileName = fileName .. "-" .. GameDiagnostics.GetCurrentTimeDate(true)
-    local extension = not output.paths.asPaths and ".txt" or ".paths"
-    local filePath = GameDiagnostics.GetGamePath() .. "\\_DIAGNOSTICS\\_PATHS\\" .. fileName .. extension
-    local result = ""
-
-    for _, path in ipairs(requestedLocations) do
-        result = result .. "\n" .. generatePaths(path, output.paths.includeLogs)
-    end
-
-    GameDiagnostics.WriteToOutput(filePath, result)
-    ImGuiExt.SetNotification(2, "Paths List Ready.")
+    dumpPaths(output.paths.requestedLocationsTable)
 end
 
 local function drawScanModsRequest()
@@ -984,7 +1024,7 @@ local function draw()
                             300 * ImGuiExt.GetScaleFactor(),
                             ImGuiWindowFlags.NoBackground)
 
-    
+
     ImGui.Columns(2, "##GameDiagnostics.ModsResource.List")
     ImGui.SetColumnWidth(0, itemColumnWidth - windowPaddingX)
 
@@ -1059,31 +1099,40 @@ local function draw()
         ImGui.EndDisabled()
     end
 
-    if isDev then
-        output.paths.asPaths = ImGuiExt.Checkbox("Save as \".libs\" file", output.paths.asPaths)
+    if settings.getModSetting("developerTools") then
+        output.paths.asPaths = ImGuiExt.Checkbox("Save as \".paths\" file", output.paths.asPaths)
     end
 
     ImGui.Text("")
-    ImGuiExt.TextAlt("Add relative paths to locations within the game's main directory separated by semicolon (\";\"):", true)
+    ImGuiExt.TextAlt("Add relative paths to locations within the game's base directory separated by semicolon (\";\"):", true)
 
-    output.paths.requested = ImGui.InputTextMultiline("##FileName", output.paths.requested, 32768, contentRegionAvailX, 4 * ImGui.GetTextLineHeightWithSpacing())
+    output.paths.requestedLocations = ImGui.InputTextMultiline("##FileName",
+                                                                output.paths.requestedLocations,
+                                                                32768,
+                                                                contentRegionAvailX,
+                                                                4 * ImGui.GetTextLineHeightWithSpacing())
 
     local getPathsButtonWidth = ImGui.CalcTextSize("Get Paths") + 8 * itemSpacing.x
 
+    ImGui.Spacing()
     ImGuiExt.AlignNextItemToCenter(getPathsButtonWidth, contentRegionAvailX)
 
     if ImGui.Button("Get Paths", getPathsButtonWidth, 0) then
-        parseRequestedPaths()
+        parseRequestedLocations()
     end
 
     ImGui.Text("")
     ImGui.EndChildFrame()
 
     if output.paths.isConfirmationPopup then
+        app.disableRootWindow(output.paths.isConfirmationPopup)
+        ImGui.EndDisabled()
         drawGetPathsConfirmation(output.paths.nonStandardLocations)
     end
 
     if output.paths.isInvalidLocationsPopup then
+        app.disableRootWindow(output.paths.isInvalidLocationsPopup)
+        ImGui.EndDisabled()
         drawInvalidLocationInfo(output.paths.invalidLocations)
     end
 end
@@ -1095,26 +1144,53 @@ function events.onInit()
     initalizeGetPathsSettings()
 end
 
-function events.onOverlayOpen()
-    if settings.getModSetting("debugMode") then
-        isDev = true
+function events.onOverlayClose()
+    output.paths.isConfirmationPopup = false
+    output.paths.isInvalidLocationsPopup = false
+end
+
+local function getFileHashAsync(filePath)
+    local query = Game.GetCyberlibsAsyncHelper():GetFileHash(filePath)
+
+    return query
+end
+
+local function getHashTest()
+    local result = getFileHashAsync("archive/pc/content/audio_2_soundbanks.archive")
+
+    if result.isCalculating then
+        utils.setDelay(1, "getHashTest", getHashTest)
+        print(result.hash)
     else
-        isDev = false
+        print(result.hash)
     end
 end
 
-function events.onOverlayClose()
-    output.paths.isConfirmationPopup = false
+local function verifyPathsAsync(filePath)
+    local query = Game.GetCyberlibsAsyncHelper():VerifyPaths(filePath)
+
+    return query
+end
+
+local function verifyPathsTest()
+    local result = verifyPathsAsync("bin/x64/plugins/cyber_engine_tweaks/mods/Cyberlibs/knowledgeBase/modsResources/Cyber Engine Tweaks.paths")
+
+    if result.isCalculating then
+        utils.setDelay(1, "verifyPathsTest", verifyPathsTest)
+        print("Calculating...")
+    else
+        print(result.isValid)
+    end
 end
 
 return {
     __NAME = "Game Diagnostics",
     __ICON = IconGlyphs.Stethoscope,
-    -- appApi = {
-    --     getPaths = getPaths,
-    --     mapDirectory = mapDirectory
-    -- },
     draw = draw,
     events = events,
+    inputs = {
+        { id = "getHash", description = "Get Hash Test", keyReleaseCallback = getHashTest },
+        { id = "verifyPaths", description = "Verify Paths Test", keyReleaseCallback = verifyPathsTest }
+    },
     openOnStart = true
 }
