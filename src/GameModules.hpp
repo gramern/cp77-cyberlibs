@@ -2,20 +2,35 @@
 
 #include <RED4ext/RED4ext.hpp>
 #include <RedLib.hpp>
-#include "Structs.hpp"
 
 #include <string>
 #include <vector>
+#include <chrono>
 #include <windows.h>
 #include <psapi.h>
 #include <mutex>
 #include <shared_mutex>
-#include <chrono>
 
 import libpe;
 
 namespace CyberlibsCore
 {
+struct GameModulesExportEntry
+{
+public:
+    Red::CString entry;
+    int32_t ordinal;
+    int32_t rva;
+    Red::CString forwarderName;
+};
+
+struct GameModulesImportEntry
+{
+public:
+    Red::CString fileName;
+    Red::DynArray<Red::CString> entries;
+};
+
 struct GameModules : Red::IScriptable
 {
 public:
@@ -117,6 +132,22 @@ protected:
     };
 };
 } // namespace CyberlibsCore
+
+RTTI_DEFINE_CLASS(CyberlibsCore::GameModulesExportEntry, {
+    RTTI_ALIAS("CyberlibsCore.GameModulesExportEntry");
+
+    RTTI_PROPERTY(entry);
+    RTTI_PROPERTY(ordinal);
+    RTTI_PROPERTY(rva);
+    RTTI_PROPERTY(forwarderName);
+});
+
+RTTI_DEFINE_CLASS(CyberlibsCore::GameModulesImportEntry, {
+    RTTI_ALIAS("CyberlibsCore.GameModulesImportEntry");
+
+    RTTI_PROPERTY(fileName);
+    RTTI_PROPERTY(entries);
+});
 
 RTTI_DEFINE_CLASS(CyberlibsCore::GameModules,
 {

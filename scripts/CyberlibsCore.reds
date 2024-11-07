@@ -23,7 +23,7 @@ public native class CyberlibsAsyncHelper extends IGameSystem {
   private let m_hashes: array<CyberlibsAsyncHelperHashQuery>;
   private let m_maxCachedHashes: Int32 = 32;
   private let m_verifiedPaths: array<CyberlibsAsyncHelperVerifyPathsQuery>;
-  private let m_maxVerifiedPaths: Int32 = 32;
+  private let m_maxCachedVerifyPathsResults: Int32 = 32;
 
   public native func IsAttached() -> Bool;
 
@@ -36,6 +36,7 @@ public native class CyberlibsAsyncHelper extends IGameSystem {
         queryIndex = i;
         break;
       }
+
       i += 1;
     }
 
@@ -66,7 +67,7 @@ public native class CyberlibsAsyncHelper extends IGameSystem {
     ArrayPush(this.m_hashes, newQuery);
 
     let promise = GameDiagnosticsHashPromise.Create(this, n"OnHashResolved", relativeFilePath, n"OnHashResolved");
-    GameDiagnostics.GetFileHashAsync(relativeFilePath, promise);
+    GameDiagnosticsAsync.GetFileHash(relativeFilePath, promise);
 
     this.CleanUpHashes();
     
@@ -86,6 +87,7 @@ public native class CyberlibsAsyncHelper extends IGameSystem {
         queryIndex = i;
         break;
       }
+
       i += 1;
     }
 
@@ -95,8 +97,8 @@ public native class CyberlibsAsyncHelper extends IGameSystem {
     }
   }
 
-  private func CleanUpVerifiedPaths() {
-    while ArraySize(this.m_verifiedPaths) > this.m_maxVerifiedPaths {
+  private func CleanUpVerifyPathsResults() {
+    while ArraySize(this.m_verifiedPaths) > this.m_maxCachedVerifyPathsResults {
       ArrayErase(this.m_verifiedPaths, 0);
     }
   }
@@ -116,15 +118,15 @@ public native class CyberlibsAsyncHelper extends IGameSystem {
     ArrayPush(this.m_verifiedPaths, newQuery);
 
     let promise = GameDiagnosticsVerifyPathsPromise.Create(this, n"OnVerifyPathsResolved", relativePathsFilePath);
-    GameDiagnostics.VerifyPathsAsync(relativePathsFilePath, promise);
+    GameDiagnosticsAsync.VerifyPaths(relativePathsFilePath, promise);
 
-    this.CleanUpVerifiedPaths();
+    this.CleanUpVerifyPathsResults();
 
     return newQuery;
   }
 
-  public final func SetMaxCachedVerifyPaths(count: Int32) -> Void {
-    this.m_maxVerifiedPaths = count;
+  public final func SetMaxCachedVerifyPathsResults(count: Int32) -> Void {
+    this.m_maxCachedVerifyPathsResults = count;
   }
 }
 
@@ -167,14 +169,22 @@ public native class GameDiagnostics extends IScriptable {
   public static native func GetCurrentTimeDate(opt pathFriendly: Bool) -> String;
   public static native func GetGamePath() -> String;
   public static native func GetFileHash(relativeFilePath: String) -> String;
-  public static native func GetFileHashAsync(relativeFilePath: String, promise: GameDiagnosticsHashPromise) -> Void;
   public static native func GetTimeDateStamp(relativeFilePath: String, opt pathFriendly: Bool) -> String;
   public static native func IsFile(relativeFilePath: String) -> Bool;
   public static native func IsDirectory(relativePath: String) -> Bool;
   public static native func IsDirectory(relativePath: String) -> array<GameDiagnosticsPathEntry>;
   public static native func VerifyPaths(relativePathsFilePath: String) -> Bool;
-  public static native func VerifyPathsAsync(relativePathsFilePath: String, promise: GameDiagnosticsVerifyPathsPromise) -> Void;
   public static native func WriteToOutput(relativeFilePath: String, content: String, opt append: Bool) -> Bool;
+}
+
+public native struct GameDiagnosticsPathEntry {
+  native let name: String;
+  native let type: String;
+}
+
+public native class GameDiagnosticsAsync extends IScriptable {
+  public static native func GetFileHash(relativeFilePath: String, promise: GameDiagnosticsHashPromise) -> Void;
+  public static native func VerifyPaths(relativePathsFilePath: String, promise: GameDiagnosticsVerifyPathsPromise) -> Void;
 }
 
 public native struct GameDiagnosticsHashPromise {
@@ -193,11 +203,6 @@ public native struct GameDiagnosticsHashPromise {
 
     return self;
   }
-}
-
-public native struct GameDiagnosticsPathEntry {
-  native let name: String;
-  native let type: String;
 }
 
 public native struct GameDiagnosticsVerifyPathsPromise {

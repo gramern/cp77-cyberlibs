@@ -4,6 +4,7 @@ local t = nil
 
 local function intializeTable()
     return {
+        ["Appearance Menu Mod"] = "bin/x64/plugins/cyber_engine_tweaks/mods/appearancemenumod/init.lua",
         ["ArchiveXL"] = "red4ext/plugins/ArchiveXL/ArchiveXL.dll",
         ["Browser Extension"] = "r6/scripts/BrowserExtension/BrowserExtension.System.reds",
         ["cybercmd"] = "bin/x64/plugins/cybercmd.asi",

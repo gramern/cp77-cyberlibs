@@ -42,6 +42,114 @@ local function ensureIsVersion(filePath, version)
     return version
 end
 
+local function isIgnoredFile(fileName, includeLogs)
+    fileName = string.lower(fileName)
+
+    local ignoredFiles = {
+        [".stub"] = true,
+        ["__folder_managed_by_vortex"] = true,
+        ["db.sqlite3"] = true,
+        ["vortex_placeholder.txt"] = true,
+        ["vortexdeployment.json"] = true,
+    }
+
+    if ignoredFiles[fileName] or string.find(fileName, "%.vortex_backup$") then
+        return true
+    end
+
+    if not includeLogs and string.find(fileName, "%.log$") then
+        return true
+    end
+
+    return false
+end
+
+local function mapDirectory(relativePath, includeLogs)
+    relativePath = utils.normalizePath(relativePath)
+    local items = GameDiagnostics.ListDirectory(relativePath)
+
+    if not items then
+        return nil
+    end
+
+    local result = {}
+
+    for _, item in ipairs(items) do
+        if not isIgnoredFile(item.name, includeLogs) then
+            if item.type == "file" then
+                result[item.name] = {
+                    type = "file"
+                }
+            elseif item.type == "dir" then
+                local subPath
+
+                if relativePath == "" then
+                    subPath = item.name
+                else
+                    subPath = relativePath .. "/" .. item.name
+                end
+
+                result[item.name] = {
+                    type = "dir",
+                    contents = mapDirectory(subPath, includeLogs)
+                }
+            end
+        end
+    end
+
+    return result
+end
+
+local function getPaths(dirMap, currentPath, result)
+    result = result or {}
+    currentPath = currentPath or ""
+
+    for name, item in pairs(dirMap) do
+        local path = currentPath == "" and name or currentPath .. "/" .. name
+
+        if item.type == "file" then
+            table.insert(result, path)
+        elseif item.type == "dir" and item.contents then
+            getPaths(item.contents, path, result)
+        end
+    end
+
+    if currentPath == "" then
+        table.sort(result)
+
+        return result
+    end
+end
+
+local function getHashes()
+
+end
+
+local function generatePaths(location, includeLogs, stageBaseDirectory)
+    local gamePath = GameDiagnostics.GetGamePath()
+    location = utils.removePrefixPath(location, gamePath)
+    local result = getPaths(mapDirectory(location, includeLogs))
+    local pathsString = ""
+
+    for i, line in ipairs(result) do
+        if stageBaseDirectory then
+            line = utils.removePrefixPath(line, location)
+        end
+
+        if location ~= "" and not stageBaseDirectory then
+            pathsString = pathsString .. location .. "/" .. line
+        else
+            pathsString = pathsString .. line
+        end
+
+        if i < #result then
+            pathsString = pathsString .. "\n"
+        end
+    end
+
+    return pathsString
+end
+
 local function scanArchiveMods()
     if not mods.archive then
         mods.archive = {
@@ -101,6 +209,21 @@ local function scanArchiveMods()
     end
 end
 
+local function getPathsFile(modDirPath)
+    local files = getPaths(mapDirectory(modDirPath, false))
+    local pathsFile = nil
+
+    for _, filePath in ipairs(files) do
+        if string.find(filePath, "%.paths$") then
+            pathsFile = filePath
+
+            break
+        end
+    end
+
+    return pathsFile
+end
+
 local function scanCetMods()
     if not mods.cet then
         mods.cet = {
@@ -116,6 +239,12 @@ local function scanCetMods()
         if item.type == "dir" then
             item.tags = { "cet" }
             item.normalizedPath = utils.normalizePath(cetPath .. "/" .. item.name)
+            local pathsFile = getPathsFile(item.normalizedPath)
+
+            if pathsFile ~= nil then
+                item.pathsFile = pathsFile
+            end
+
             local initPath = item.normalizedPath .. "/init.lua"
             local kbName = getModsResourceName(initPath)
 
@@ -181,6 +310,12 @@ local function scanRed4extMods()
         local normalizedName = string.lower(item.name)
 
         if item.type == "dir" and red4extModulesSet[normalizedName] then
+            local pathsFile = getPathsFile(red4extModulesSet[normalizedName].normalizedPath)
+
+            if pathsFile ~= nil then
+                red4extModulesSet[normalizedName].pathsFile = pathsFile
+            end
+
             local kbName = getModsResourceName(red4extModulesSet[normalizedName].normalizedPath)
 
             if kbName then
@@ -251,6 +386,12 @@ local function scanRedscriptMods()
                 end
 
                 if next(scriptPaths) then
+                    local pathsFile = getPathsFile(item.normalizedPath)
+
+                    if pathsFile ~= nil then
+                        item.pathsFile = pathsFile
+                    end
+
                     for _, scriptPath in ipairs(scriptPaths) do
                         local kbName = getModsResourceName(scriptPath)
 
@@ -364,7 +505,7 @@ local function getModsResourcesStatus()
         result[name] = "NOT INSTALLED"
 
         for _, framework in ipairs (coreFrameworks) do
-            if framework == name 
+            if framework == name
             then
                 local isLoaded = GameModules.IsLoaded(utils.getPathLastComponent(relativePath))
                 local version = Cyberlibs.GetVersion(utils.getPathLastComponent(relativePath))
@@ -416,7 +557,7 @@ local function scanMods()
         sortModsResources(getModsResourcesStatus())
     end
 
-    ImGuiExt.SetNotification(2, "Mods scanning complete.")
+    ImGuiExt.SetNotification(2, "Mods scan complete.")
 end
 
 local function initalizeModsReportSettings()
@@ -652,108 +793,10 @@ local function initalizeGetPathsSettings()
     output.paths = {
         asPaths = false,
         includeLogs = false,
-        requestedLocations = ""
+        requestedLocations = "",
+        stageBaseDirectory = false,
+        getSha256 = false
     }
-end
-
-local function isIgnoredFile(fileName, includeLogs)
-    fileName = string.lower(fileName)
-
-    local ignoredFiles = {
-        [".stub"] = true,
-        ["__folder_managed_by_vortex"] = true,
-        ["db.sqlite3"] = true,
-        ["vortex_placeholder.txt"] = true,
-        ["vortexdeployment.json"] = true,
-    }
-
-    if ignoredFiles[fileName] or string.find(fileName, "%.vortex_backup$") then
-        return true
-    end
-
-    if not includeLogs and string.find(fileName, "%.log$") then
-        return true
-    end
-
-    return false
-end
-
-local function mapDirectory(relativePath, includeLogs)
-    relativePath = utils.normalizePath(relativePath)
-    local items = GameDiagnostics.ListDirectory(relativePath)
-
-    if not items then
-        return nil
-    end
-
-    local result = {}
-
-    for _, item in ipairs(items) do
-        if not isIgnoredFile(item.name, includeLogs) then
-            if item.type == "file" then
-                result[item.name] = {
-                    type = "file"
-                }
-            elseif item.type == "dir" then
-                local subPath
-
-                if relativePath == "" then
-                    subPath = item.name
-                else
-                    subPath = relativePath .. "/" .. item.name
-                end
-
-                result[item.name] = {
-                    type = "dir",
-                    contents = mapDirectory(subPath, includeLogs)
-                }
-            end
-        end
-    end
-
-    return result
-end
-
-local function getPaths(dirMap, currentPath, result)
-    result = result or {}
-    currentPath = currentPath or ""
-
-    for name, item in pairs(dirMap) do
-        local path = currentPath == "" and name or currentPath .. "/" .. name
-
-        if item.type == "file" then
-            table.insert(result, path)
-        elseif item.type == "dir" and item.contents then
-            getPaths(item.contents, path, result)
-        end
-    end
-
-    if currentPath == "" then
-        table.sort(result)
-
-        return result
-    end
-end
-
-local function generatePaths(location, includeLogs)
-    local gamePath = GameDiagnostics.GetGamePath()
-    location = utils.removePrefixPath(location, gamePath)
-    local result = getPaths(mapDirectory(location, includeLogs))
-    local pathsString = ""
-
-    for i, line in ipairs(result) do
-        if location ~= "" then
-            pathsString = pathsString .. location .. "/" .. line
-        else
-            pathsString = pathsString .. line
-        end
-
-        if i < #result then
-            pathsString = pathsString .. "\n"
-        end
-    end
-
-    return pathsString
 end
 
 local function drawInvalidLocationInfo(invalidLocations)
@@ -817,8 +860,8 @@ local function isModLocation(locationPath)
     return false
 end
 
-local function dumpPaths(requestedLocations)
-    ImGuiExt.SetNotification(0, "Generating Paths...")
+local function dumpPaths(requestedLocations, includeLogs, asPaths, stageBaseDirectory)
+    ImGuiExt.SetNotification(0, "Generating paths...")
 
     local fileName = ""
 
@@ -830,17 +873,17 @@ local function dumpPaths(requestedLocations)
         fileName = "requested"
     end
 
-    fileName = fileName .. (not output.paths.asPaths and "-paths" or "") .. "-" .. GameDiagnostics.GetCurrentTimeDate(true)
-    local extension = not output.paths.asPaths and ".txt" or ".paths"
+    fileName = fileName .. (not asPaths and "-paths" or "") .. "-" .. GameDiagnostics.GetCurrentTimeDate(true)
+    local extension = not asPaths and ".txt" or ".paths"
     local filePath = "_PATHS\\" .. fileName .. extension
     local result = ""
 
     for i, location in ipairs(requestedLocations) do
-        if not output.paths.asPaths then
+        if not asPaths then
             result = result .. style.formatHeader(location) .. "\n"
         end
 
-        result = result .. generatePaths(location, output.paths.includeLogs)
+        result = result .. generatePaths(location, includeLogs, stageBaseDirectory)
 
         if i < #requestedLocations then
             result = result .. "\n"
@@ -848,7 +891,7 @@ local function dumpPaths(requestedLocations)
     end
 
     GameDiagnostics.WriteToOutput(filePath, result)
-    ImGuiExt.SetNotification(2, "Requested Paths Are Ready.")
+    ImGuiExt.SetNotification(2, "Requested paths are ready.")
 end
 
 local function drawGetPathsConfirmation(nonStandardLocations)
@@ -893,7 +936,10 @@ local function drawGetPathsConfirmation(nonStandardLocations)
             output.paths.isConfirmationPopup = false
 
             app.disableRootWindow(output.paths.isConfirmationPopup)
-            dumpPaths(output.paths.requestedLocationsTable)
+            dumpPaths(output.paths.requestedLocationsTable,
+                        output.paths.includeLogs,
+                        output.paths.asPaths,
+                        output.paths.stageBaseDirectory)
 
             output.paths.requestedLocationsTable = nil
         end
@@ -917,8 +963,6 @@ local function parseRequestedLocations()
     end
 
     for _, location in ipairs(requestedLocations) do
-        print(location)
-
         if not utils.isValidPath(location) or not GameDiagnostics.IsDirectory(location) then
             table.insert(output.paths.invalidLocations, location)
         end
@@ -934,23 +978,32 @@ local function parseRequestedLocations()
 
     output.paths.requestedLocationsTable = requestedLocations
 
-    for _, location in ipairs(requestedLocations) do
-        if not isModLocation(location) then
-            if location == "" then
-                location = "The game's base directory"
-            end
+    if output.paths.stageBaseDirectory and #requestedLocations > 1 then
+        ImGuiExt.SetStatusBar("Too much locations. You can stage one base directory to get paths from.")
 
-            table.insert(output.paths.nonStandardLocations, location)
+        return
+    elseif not output.paths.stageBaseDirectory then
+        for _, location in ipairs(requestedLocations) do
+            if not isModLocation(location) then
+                if location == "" then
+                    location = "The game's base directory"
+                end
+
+                table.insert(output.paths.nonStandardLocations, location)
+            end
+        end
+
+        if next(output.paths.nonStandardLocations) then
+            output.paths.isConfirmationPopup = true
+
+            return
         end
     end
 
-    if next(output.paths.nonStandardLocations) then
-        output.paths.isConfirmationPopup = true
-
-        return
-    end
-
-    dumpPaths(output.paths.requestedLocationsTable)
+    dumpPaths(output.paths.requestedLocationsTable,
+    output.paths.includeLogs,
+    output.paths.asPaths,
+    output.paths.stageBaseDirectory)
 end
 
 local function drawScanModsRequest()
@@ -990,6 +1043,7 @@ local function draw()
     local windowPaddingX = ImGui.GetStyle().WindowPadding.x
     local itemWidth = windowWidth - 2 * windowPaddingX
     local itemSpacing = ImGui.GetStyle().ItemSpacing
+    local framePadding = ImGui.GetStyle().FramePadding
     local scrollbarSize = ImGui.GetStyle().ScrollbarSize
     local textRed, textGreen, textBlue, textAlpha
 
@@ -1101,16 +1155,29 @@ local function draw()
 
     if settings.getModSetting("developerTools") then
         output.paths.asPaths = ImGuiExt.Checkbox("Save as \".paths\" file", output.paths.asPaths)
+        output.paths.stageBaseDirectory = ImGuiExt.Checkbox("Use staged base directory", output.paths.stageBaseDirectory)
+        output.paths.getSha256 = ImGuiExt.Checkbox("Get SHA-256 file hashes", output.paths.getSha256)
     end
 
     ImGui.Text("")
-    ImGuiExt.TextAlt("Add relative paths to locations within the game's base directory separated by semicolon (\";\"):", true)
+
+    local numberOfLines
+
+    if not output.paths.stageBaseDirectory then
+        numberOfLines = 4
+
+        ImGuiExt.TextAlt("Add relative paths to locations within the game's base directory separated by semicolon (\";\"):", true)
+    else
+        numberOfLines = 1
+
+        ImGuiExt.TextAlt("Relative path to a stage location within the game's base directory:", true)
+    end
 
     output.paths.requestedLocations = ImGui.InputTextMultiline("##FileName",
                                                                 output.paths.requestedLocations,
                                                                 32768,
                                                                 contentRegionAvailX,
-                                                                4 * ImGui.GetTextLineHeightWithSpacing())
+                                                                numberOfLines * ImGui.GetTextLineHeightWithSpacing() + framePadding.y)
 
     local getPathsButtonWidth = ImGui.CalcTextSize("Get Paths") + 8 * itemSpacing.x
 

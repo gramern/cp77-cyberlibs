@@ -242,9 +242,9 @@ function utils.removePrefixPath(fullPath, prefixPath)
     prefixPath = utils.normalizePath(prefixPath)
 
     if stringSub(fullPath, 1, #prefixPath) == prefixPath then
-        local result = fullPath:sub(#prefixPath + 1)
+        local result = stringSub(fullPath, #prefixPath + 1)
         
-        if result:sub(1, 1) == "/" then
+        if stringSub(result, 1, 1) == "/" then
             result = stringSub(result, 2)
         end
         return result
